@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/layout_metrics.dart';
 import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
@@ -18,11 +19,12 @@ class HomeScreen extends ConsumerWidget {
     final playlists = ref.watch(playlistsProvider);
     final tracks = ref.watch(allTracksProvider);
     final downloaded = ref.watch(downloadedTracksProvider);
+    final bottomInset = ref.watch(bottomContentInsetProvider);
 
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: 24 + bottomInset),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),

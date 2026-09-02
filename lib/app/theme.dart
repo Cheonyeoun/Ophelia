@@ -21,7 +21,16 @@ abstract final class AppColors {
 /// and the mini-player overlay that floats above it agree on the same
 /// number — see lib/app/router.dart.
 const double kNavBarHeight = 72;
+
+/// A seed default only — used for one frame before the mini-player's
+/// real height is measured (see [MeasureSize] in lib/app/router.dart),
+/// and as its fallback while nothing is being measured at all.
 const double kMiniPlayerHeight = 56;
+
+/// The gap between the floating mini-player and whatever's below it
+/// (the nav bar, or the screen edge). Unlike [kMiniPlayerHeight], this
+/// doesn't depend on content/font metrics, so it doesn't need measuring.
+const double kMiniPlayerGap = 8;
 
 ThemeData buildAppTheme() {
   final base = ThemeData.dark(useMaterial3: true);

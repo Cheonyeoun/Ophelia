@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/layout_metrics.dart';
 import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
@@ -19,12 +20,13 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider);
     final topSongs = ref.watch(topSongsProvider);
+    final bottomInset = ref.watch(bottomContentInsetProvider);
 
     return Scaffold(
       backgroundColor: AppColors.void_,
       appBar: const ScreenTopBar(),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: EdgeInsets.fromLTRB(18, 0, 18, bottomInset),
         children: [
           const SizedBox(height: 8),
           const CircleAvatar(radius: 32, backgroundColor: AppColors.ink2),

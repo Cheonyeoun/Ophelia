@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/playback_controller.dart';
+import '../../app/responsive.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/cover_art.dart';
 
@@ -12,6 +13,12 @@ import '../../app/widgets/cover_art.dart';
 /// Immersive Play — the mockups don't show a dedicated "expand" icon
 /// here, so the cover art (a common now-playing pattern) is the
 /// immersive-toggle affordance the architecture doc's §6 refers to.
+///
+/// This screen is a single fixed-size column, not something scrollable,
+/// so on a short device it can't just grow a scrollbar — [compactScale]
+/// shrinks the cover art and the gaps between elements together so
+/// nothing overflows, instead of a fixed 200x200 cover and fixed gaps
+/// regardless of available height.
 class EverydayPlayScreen extends ConsumerWidget {
   const EverydayPlayScreen({super.key});
 
@@ -31,125 +38,146 @@ class EverydayPlayScreen extends ConsumerWidget {
                   style: TextStyle(color: AppColors.mist),
                 ),
               )
-            : Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                          color: AppColors.pale,
-                          onPressed: () => context.pop(),
-                        ),
-                        const Expanded(
-                          child: Text(
-                            'playing from queue',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: AppColors.mist),
-                          ),
-                        ),
-                        const IconButton(
-                          icon: Icon(Icons.menu, size: 18),
-                          color: AppColors.paleDim,
-                          onPressed: null,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      controller.toggleImmersive();
-                      context.push('/immersive-play');
-                    },
-                    child: const CoverArt(size: 200, borderRadius: 16),
-                  ),
-                  const SizedBox(height: 22),
-                  Text(
-                    track.title,
-                    textAlign: TextAlign.center,
-                    style: frauncesStyle(fontSize: 19),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    track.artist,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: AppColors.paleDim),
-                  ),
-                  const SizedBox(height: 22),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: _FlowLine(
-                      progress: track.durationMs == 0
-                          ? 0
-                          : uiState.playback.position.inMilliseconds /
-                              track.durationMs,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatDuration(uiState.playback.position),
-                          style: const TextStyle(fontSize: 10, color: AppColors.mist),
-                        ),
-                        Text(
-                          _formatDuration(Duration(milliseconds: track.durationMs)),
-                          style: const TextStyle(fontSize: 10, color: AppColors.mist),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final scale = compactScale(
+                    availableHeight: constraints.maxHeight,
+                  );
+                  double gap(double base) =>
+                      (base * scale).clamp(base * 0.4, base);
+                  final coverSize = (200.0 * scale).clamp(
+                    120.0,
+                    constraints.maxWidth * 0.62,
+                  );
+
+                  return Column(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.skip_previous_rounded, size: 26),
-                        color: AppColors.paleDim,
-                        onPressed: controller.skipPrevious,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                size: 18,
+                              ),
+                              color: AppColors.pale,
+                              onPressed: () => context.pop(),
+                            ),
+                            const Expanded(
+                              child: Text(
+                                'playing from queue',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, color: AppColors.mist),
+                              ),
+                            ),
+                            const IconButton(
+                              icon: Icon(Icons.menu, size: 18),
+                              color: AppColors.paleDim,
+                              onPressed: null,
+                            ),
+                          ],
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.replay_10_rounded, size: 22),
-                        color: AppColors.paleDim,
-                        onPressed: () => controller.seekBy(const Duration(seconds: -10)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          controller.toggleImmersive();
+                          context.push('/immersive-play');
+                        },
+                        child: CoverArt(size: coverSize, borderRadius: 16),
                       ),
-                      const SizedBox(width: 8),
-                      _PlayPauseButton(
-                        isPlaying: uiState.isPlaying,
-                        onTap: controller.togglePlayPause,
+                      SizedBox(height: gap(22)),
+                      Text(
+                        track.title,
+                        textAlign: TextAlign.center,
+                        style: frauncesStyle(fontSize: 19),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.forward_10_rounded, size: 22),
-                        color: AppColors.paleDim,
-                        onPressed: () => controller.seekBy(const Duration(seconds: 10)),
+                      SizedBox(height: gap(4)),
+                      Text(
+                        track.artist,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12, color: AppColors.paleDim),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.skip_next_rounded, size: 26),
-                        color: AppColors.paleDim,
-                        onPressed: controller.skipNext,
+                      SizedBox(height: gap(22)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: _FlowLine(
+                          progress: track.durationMs == 0
+                              ? 0
+                              : uiState.playback.position.inMilliseconds /
+                                  track.durationMs,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _formatDuration(uiState.playback.position),
+                              style: const TextStyle(fontSize: 10, color: AppColors.mist),
+                            ),
+                            Text(
+                              _formatDuration(
+                                Duration(milliseconds: track.durationMs),
+                              ),
+                              style: const TextStyle(fontSize: 10, color: AppColors.mist),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: gap(22)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.skip_previous_rounded, size: 26),
+                            color: AppColors.paleDim,
+                            onPressed: controller.skipPrevious,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.replay_10_rounded, size: 22),
+                            color: AppColors.paleDim,
+                            onPressed: () =>
+                                controller.seekBy(const Duration(seconds: -10)),
+                          ),
+                          const SizedBox(width: 8),
+                          _PlayPauseButton(
+                            isPlaying: uiState.isPlaying,
+                            onTap: controller.togglePlayPause,
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.forward_10_rounded, size: 22),
+                            color: AppColors.paleDim,
+                            onPressed: () =>
+                                controller.seekBy(const Duration(seconds: 10)),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.skip_next_rounded, size: 26),
+                            color: AppColors.paleDim,
+                            onPressed: controller.skipNext,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: gap(12)),
+                      Padding(
+                        padding: EdgeInsets.only(bottom: gap(24)),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.shuffle, size: 16, color: AppColors.mist),
+                            SizedBox(width: 38),
+                            Icon(Icons.repeat, size: 16, color: AppColors.mist),
+                            SizedBox(width: 38),
+                            Icon(Icons.queue_music, size: 16, color: AppColors.mist),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.shuffle, size: 16, color: AppColors.mist),
-                        SizedBox(width: 38),
-                        Icon(Icons.repeat, size: 16, color: AppColors.mist),
-                        SizedBox(width: 38),
-                        Icon(Icons.queue_music, size: 16, color: AppColors.mist),
-                      ],
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
       ),
     );

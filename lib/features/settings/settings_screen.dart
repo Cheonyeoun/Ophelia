@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/layout_metrics.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 
@@ -23,11 +24,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(userProfileProvider);
+    final bottomInset = ref.watch(bottomContentInsetProvider);
 
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: 24 + bottomInset),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
