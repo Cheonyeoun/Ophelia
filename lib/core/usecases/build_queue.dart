@@ -6,14 +6,16 @@ import '../error/failure.dart';
 import '../error/result.dart';
 
 /// Resolves a [Playlist]'s ordered track ids to full [Track] entities and
-/// loads them into the playback queue.
+/// loads them into the playback queue, returning the resolved tracks so
+/// callers (e.g. the presentation layer, to know what's now queued) don't
+/// have to re-resolve them separately.
 class BuildQueue {
   final MediaSourcePort mediaSource;
   final PlaybackEnginePort playback;
 
   BuildQueue(this.mediaSource, this.playback);
 
-  Future<Result<void, Failure>> call(Playlist playlist) async {
+  Future<Result<List<Track>, Failure>> call(Playlist playlist) async {
     final tracks = <Track>[];
     for (final trackId in playlist.trackIds) {
       final result = await mediaSource.getTrackMetadata(trackId);
@@ -24,6 +26,12 @@ class BuildQueue {
           return Result.failure(f);
       }
     }
-    return playback.setQueue(tracks);
+    final setQueueResult = await playback.setQueue(tracks);
+    switch (setQueueResult) {
+      case Success():
+        return Result.success(tracks);
+      case ResultFailure(failure: final f):
+        return Result.failure(f);
+    }
   }
 }

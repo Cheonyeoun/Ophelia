@@ -9,16 +9,21 @@ import 'package:ophelia/data/fakes/sample_data.dart';
 import '../../support/result_test_helpers.dart';
 
 void main() {
-  test("resolves a playlist's track ids to tracks and loads the queue", () async {
-    final mediaSource = FakeMediaSourcePort();
-    final playback = FakePlaybackEnginePort();
-    final buildQueue = BuildQueue(mediaSource, playback);
-    final playlist = samplePlaylists.first;
+  test(
+    "resolves a playlist's track ids to tracks, loads the queue, and "
+    "returns the resolved tracks",
+    () async {
+      final mediaSource = FakeMediaSourcePort();
+      final playback = FakePlaybackEnginePort();
+      final buildQueue = BuildQueue(mediaSource, playback);
+      final playlist = samplePlaylists.first;
 
-    unwrapValue(await buildQueue(playlist));
+      final tracks = unwrapValue(await buildQueue(playlist));
 
-    expect(playback.queue.map((track) => track.id), playlist.trackIds);
-  });
+      expect(tracks.map((track) => track.id), playlist.trackIds);
+      expect(playback.queue, tracks);
+    },
+  );
 
   test('propagates a failure when a track id cannot be resolved', () async {
     final mediaSource = FakeMediaSourcePort();
