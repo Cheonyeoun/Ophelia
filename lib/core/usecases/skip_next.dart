@@ -7,12 +7,11 @@ import 'listening_session.dart';
 
 /// Skips to the next track in the queue, finalizing the outgoing track's
 /// listening session (recording its actual elapsed time) and starting a
-/// new one for [nextTrack].
+/// new one for whatever track the engine landed on.
 ///
-/// [nextTrack] is the track the queue is skipping to. `PlaybackEnginePort`
-/// has no way to report what its internally-managed queue advanced to, so
-/// the caller — which already knows the queue (e.g. from `PlaybackState`)
-/// — supplies it.
+/// Returns that track: the engine (not the caller) decides what's next,
+/// since shuffle/repeat mean it isn't necessarily the next linear queue
+/// position (see docs/architecture.md §3.1's `PlaybackEnginePort`).
 class SkipNext {
   final PlaybackEnginePort playback;
   final LocalLibraryPort library;
@@ -20,11 +19,12 @@ class SkipNext {
 
   SkipNext(this.playback, this.library, this.session);
 
-  Future<Result<void, Failure>> call(Track nextTrack) async {
+  Future<Result<Track, Failure>> call() async {
     final skipResult = await playback.skipNext();
+    final Track next;
     switch (skipResult) {
-      case Success():
-        break;
+      case Success(value: final track):
+        next = track;
       case ResultFailure(failure: final f):
         return Result.failure(f);
     }
@@ -40,7 +40,7 @@ class SkipNext {
       }
     }
 
-    session.start(nextTrack.id);
-    return const Result.success(null);
+    session.start(next.id);
+    return Result.success(next);
   }
 }

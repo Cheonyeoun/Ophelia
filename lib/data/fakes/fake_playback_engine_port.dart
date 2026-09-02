@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import '../../core/domain/playback_engine_port.dart';
+import '../../core/domain/playback_state.dart';
 import '../../core/domain/track.dart';
 import '../../core/error/failure.dart';
 import '../../core/error/result.dart';
@@ -15,6 +18,8 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   Duration position = Duration.zero;
   List<Track> queue = const [];
   bool isPlaying = false;
+  bool shuffle = false;
+  RepeatMode repeatMode = RepeatMode.off;
 
   /// Position of [currentTrack] within [queue] — the source of truth for
   /// skipNext/skipPrevious, set directly by [setQueue] and moved by ±1 on
@@ -22,12 +27,26 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   /// duplicate tracks in the queue don't confuse navigation.
   int currentIndex = -1;
 
+  /// Indices already visited during the current shuffle "round", in
+  /// order, with [currentIndex] always last — lets skipPrevious undo a
+  /// shuffle pick instead of drawing a fresh random one.
+  final List<int> _shuffleHistory = [];
+
+  final Random _random;
+
+  FakePlaybackEnginePort({Random? random}) : _random = random ?? Random();
+
   @override
   Future<Result<void, Failure>> play(Track track, String sourcePath) async {
     currentTrack = track;
     currentSourcePath = sourcePath;
     position = Duration.zero;
     isPlaying = true;
+    final index = queue.indexOf(track);
+    if (index != -1) currentIndex = index;
+    _shuffleHistory
+      ..clear()
+      ..add(currentIndex);
     return const Result.success(null);
   }
 
@@ -44,30 +63,134 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   }
 
   @override
-  Future<Result<void, Failure>> skipNext() async {
-    if (currentIndex == -1 || currentIndex >= queue.length - 1) {
+  Future<Result<Track, Failure>> skipNext() async {
+    if (currentIndex == -1 || queue.isEmpty) {
       return Result.failure(const NotFoundFailure('no next track'));
     }
+
+    if (repeatMode == RepeatMode.one) {
+      _moveToCurrentIndex();
+      return Result.success(currentTrack!);
+    }
+
+    if (shuffle) {
+      return _shuffleNext();
+    }
+
+    if (currentIndex >= queue.length - 1) {
+      if (repeatMode == RepeatMode.all) {
+        currentIndex = 0;
+        _moveToCurrentIndex();
+        return Result.success(currentTrack!);
+      }
+      return Result.failure(const NotFoundFailure('no next track'));
+    }
+
     currentIndex++;
     _moveToCurrentIndex();
-    return const Result.success(null);
+    return Result.success(currentTrack!);
   }
 
   @override
-  Future<Result<void, Failure>> skipPrevious() async {
-    if (currentIndex <= 0) {
+  Future<Result<Track, Failure>> skipPrevious() async {
+    if (currentIndex == -1 || queue.isEmpty) {
       return Result.failure(const NotFoundFailure('no previous track'));
     }
+
+    if (repeatMode == RepeatMode.one) {
+      _moveToCurrentIndex();
+      return Result.success(currentTrack!);
+    }
+
+    if (shuffle) {
+      return _shufflePrevious();
+    }
+
+    if (currentIndex <= 0) {
+      if (repeatMode == RepeatMode.all) {
+        currentIndex = queue.length - 1;
+        _moveToCurrentIndex();
+        return Result.success(currentTrack!);
+      }
+      return Result.failure(const NotFoundFailure('no previous track'));
+    }
+
     currentIndex--;
     _moveToCurrentIndex();
-    return const Result.success(null);
+    return Result.success(currentTrack!);
   }
 
   @override
   Future<Result<void, Failure>> setQueue(List<Track> tracks) async {
     queue = List.unmodifiable(tracks);
     currentIndex = queue.isEmpty ? -1 : 0;
+    _shuffleHistory
+      ..clear()
+      ..add(currentIndex);
     return const Result.success(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> setShuffle(bool enabled) async {
+    shuffle = enabled;
+    if (enabled) {
+      _shuffleHistory
+        ..clear()
+        ..add(currentIndex);
+    }
+    return const Result.success(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> setRepeatMode(RepeatMode mode) async {
+    repeatMode = mode;
+    return const Result.success(null);
+  }
+
+  Result<Track, Failure> _shuffleNext() {
+    final unplayed = [
+      for (var i = 0; i < queue.length; i++)
+        if (!_shuffleHistory.contains(i)) i,
+    ];
+
+    if (unplayed.isNotEmpty) {
+      final next = unplayed[_random.nextInt(unplayed.length)];
+      _shuffleHistory.add(next);
+      currentIndex = next;
+      _moveToCurrentIndex();
+      return Result.success(currentTrack!);
+    }
+
+    // Every track has been visited this round.
+    if (repeatMode == RepeatMode.off) {
+      return Result.failure(const NotFoundFailure('no next track'));
+    }
+    final others = [
+      for (var i = 0; i < queue.length; i++) if (i != currentIndex) i,
+    ];
+    if (others.isEmpty) {
+      // Only one track in the queue — nothing else to shuffle to.
+      _moveToCurrentIndex();
+      return Result.success(currentTrack!);
+    }
+    final next = others[_random.nextInt(others.length)];
+    _shuffleHistory
+      ..clear()
+      ..add(currentIndex)
+      ..add(next);
+    currentIndex = next;
+    _moveToCurrentIndex();
+    return Result.success(currentTrack!);
+  }
+
+  Result<Track, Failure> _shufflePrevious() {
+    if (_shuffleHistory.length <= 1) {
+      return Result.failure(const NotFoundFailure('no previous track'));
+    }
+    _shuffleHistory.removeLast();
+    currentIndex = _shuffleHistory.last;
+    _moveToCurrentIndex();
+    return Result.success(currentTrack!);
   }
 
   void _moveToCurrentIndex() {

@@ -10,6 +10,13 @@ import 'listening_session.dart';
 /// the "download-first, stream-fallback" flow (docs/architecture.md
 /// §3.2) — then starts tracking its listening time.
 ///
+/// When [queue] is given, it becomes the engine's active queue — e.g. the
+/// track list the caller played this track from — so skipNext/
+/// skipPrevious (and shuffle/repeat) have somewhere to operate; otherwise
+/// the queue is just [track] on its own. The engine resolves [track]'s
+/// position within that queue itself (see
+/// data/fakes/fake_playback_engine_port.dart's `play`).
+///
 /// This does not finalize any track that was already playing — only
 /// `PauseTrack`, `SkipNext`, and `SkipPrevious` do that (see
 /// listening_session.dart). Calling `PlayTrack` again for a different
@@ -23,7 +30,15 @@ class PlayTrack {
 
   PlayTrack(this.playback, this.mediaSource, this.downloads, this.session);
 
-  Future<Result<void, Failure>> call(Track track) async {
+  Future<Result<void, Failure>> call(Track track, {List<Track>? queue}) async {
+    final setQueueResult = await playback.setQueue(queue ?? [track]);
+    switch (setQueueResult) {
+      case Success():
+        break;
+      case ResultFailure(failure: final f):
+        return Result.failure(f);
+    }
+
     final isDownloadedResult = await downloads.isDownloaded(track.id);
     final bool isDownloaded;
     switch (isDownloadedResult) {

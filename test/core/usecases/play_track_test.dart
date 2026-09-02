@@ -47,6 +47,31 @@ void main() {
     );
   });
 
+  test(
+    'sets the engine queue to the given queue, positioned at the played '
+    'track',
+    () async {
+      final queue = [sampleTracks[0], sampleTracks[1], sampleTracks[2]];
+
+      unwrapValue(await playTrack(sampleTracks[1], queue: queue));
+
+      expect(playback.queue, queue);
+      expect(playback.currentIndex, 1);
+    },
+  );
+
+  test(
+    'defaults the engine queue to just the played track when none is given',
+    () async {
+      final track = sampleTracks.first;
+
+      unwrapValue(await playTrack(track));
+
+      expect(playback.queue, [track]);
+      expect(playback.currentIndex, 0);
+    },
+  );
+
   test('starts tracking a listening session for the played track', () async {
     final track = sampleTracks.first;
 

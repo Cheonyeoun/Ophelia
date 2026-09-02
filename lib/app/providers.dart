@@ -24,6 +24,8 @@ import '../core/usecases/seek_by.dart';
 import '../core/usecases/skip_next.dart';
 import '../core/usecases/skip_previous.dart';
 import '../core/usecases/toggle_immersive.dart';
+import '../core/usecases/toggle_repeat_mode.dart';
+import '../core/usecases/toggle_shuffle.dart';
 import '../core/usecases/update_profile.dart';
 import '../data/fakes/fake_download_port.dart';
 import '../data/fakes/fake_export_import_port.dart';
@@ -118,6 +120,14 @@ final buildQueueProvider = Provider<BuildQueue>(
 
 final toggleImmersiveProvider = Provider<ToggleImmersive>(
   (ref) => const ToggleImmersive(),
+);
+
+final toggleShuffleProvider = Provider<ToggleShuffle>(
+  (ref) => ToggleShuffle(ref.watch(playbackEngineProvider)),
+);
+
+final toggleRepeatModeProvider = Provider<ToggleRepeatMode>(
+  (ref) => ToggleRepeatMode(ref.watch(playbackEngineProvider)),
 );
 
 final downloadTrackProvider = Provider<DownloadTrack>(

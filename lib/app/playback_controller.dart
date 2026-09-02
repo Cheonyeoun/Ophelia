@@ -37,16 +37,15 @@ class PlaybackUiState {
 
 /// Coordinates the playback use cases and exposes the result to screens
 /// via Riverpod — screens call use cases through this controller, never
-/// through ports/fakes directly (docs/architecture.md §3.4). This is also
-/// the one place that tracks queue position, since `PlaybackEnginePort`
-/// has no "what's next" query (see core/usecases/skip_next.dart).
+/// through ports/fakes directly (docs/architecture.md §3.4). The engine
+/// (not this controller) tracks queue position, since it also has to
+/// decide the next index under shuffle/repeat — see
+/// core/usecases/skip_next.dart.
 ///
 /// Failures from the underlying use cases are not yet surfaced to the UI
 /// (e.g. as a snackbar) — every method just leaves the state unchanged on
 /// failure. Not solved here.
 class PlaybackController extends Notifier<PlaybackUiState> {
-  int _queueIndex = -1;
-
   @override
   PlaybackUiState build() => PlaybackUiState.initial();
 
@@ -55,11 +54,13 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// skipNext/skipPrevious have somewhere to go; otherwise the queue is
   /// just [track] on its own.
   Future<void> play(Track track, {List<Track>? queue}) async {
-    final result = await ref.read(playTrackProvider)(track);
+    final effectiveQueue = queue ?? [track];
+    final result = await ref.read(playTrackProvider)(
+      track,
+      queue: effectiveQueue,
+    );
     if (result case ResultFailure()) return;
 
-    final effectiveQueue = queue ?? [track];
-    _queueIndex = effectiveQueue.indexOf(track);
     state = state.copyWith(
       playback: state.playback.copyWith(
         currentTrack: track,
@@ -97,39 +98,35 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   }
 
   Future<void> skipNext() async {
-    final queue = state.playback.queue;
-    if (_queueIndex < 0 || _queueIndex >= queue.length - 1) return;
-    final next = queue[_queueIndex + 1];
-
-    final result = await ref.read(skipNextProvider)(next);
-    if (result case ResultFailure()) return;
-
-    _queueIndex++;
-    state = state.copyWith(
-      playback: state.playback.copyWith(
-        currentTrack: next,
-        position: Duration.zero,
-      ),
-      isPlaying: true,
-    );
+    final result = await ref.read(skipNextProvider)();
+    switch (result) {
+      case Success(value: final track):
+        state = state.copyWith(
+          playback: state.playback.copyWith(
+            currentTrack: track,
+            position: Duration.zero,
+          ),
+          isPlaying: true,
+        );
+      case ResultFailure():
+        return;
+    }
   }
 
   Future<void> skipPrevious() async {
-    final queue = state.playback.queue;
-    if (_queueIndex <= 0 || _queueIndex >= queue.length) return;
-    final previous = queue[_queueIndex - 1];
-
-    final result = await ref.read(skipPreviousProvider)(previous);
-    if (result case ResultFailure()) return;
-
-    _queueIndex--;
-    state = state.copyWith(
-      playback: state.playback.copyWith(
-        currentTrack: previous,
-        position: Duration.zero,
-      ),
-      isPlaying: true,
-    );
+    final result = await ref.read(skipPreviousProvider)();
+    switch (result) {
+      case Success(value: final track):
+        state = state.copyWith(
+          playback: state.playback.copyWith(
+            currentTrack: track,
+            position: Duration.zero,
+          ),
+          isPlaying: true,
+        );
+      case ResultFailure():
+        return;
+    }
   }
 
   Future<void> seekBy(Duration offset) async {
@@ -151,6 +148,26 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     state = state.copyWith(
       playback: ref.read(toggleImmersiveProvider)(state.playback),
     );
+  }
+
+  Future<void> toggleShuffle() async {
+    final result = await ref.read(toggleShuffleProvider)(state.playback);
+    switch (result) {
+      case Success(value: final updated):
+        state = state.copyWith(playback: updated);
+      case ResultFailure():
+        return;
+    }
+  }
+
+  Future<void> toggleRepeatMode() async {
+    final result = await ref.read(toggleRepeatModeProvider)(state.playback);
+    switch (result) {
+      case Success(value: final updated):
+        state = state.copyWith(playback: updated);
+      case ResultFailure():
+        return;
+    }
   }
 }
 

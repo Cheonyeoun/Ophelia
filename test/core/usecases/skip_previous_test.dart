@@ -26,13 +26,14 @@ void main() {
   test('goes back to the previous track in the queue', () async {
     await playback.skipNext();
 
-    unwrapValue(await skipPrevious(sampleTracks[0]));
+    final track = unwrapValue(await skipPrevious());
 
+    expect(track, sampleTracks[0]);
     expect(playback.currentTrack, sampleTracks[0]);
   });
 
   test('propagates a failure when already at the start of the queue', () async {
-    final failure = unwrapFailure(await skipPrevious(sampleTracks[0]));
+    final failure = unwrapFailure(await skipPrevious());
 
     expect(failure, isA<NotFoundFailure>());
   });
@@ -40,7 +41,7 @@ void main() {
   test('starts tracking the new current track after skipping back', () async {
     await playback.skipNext();
 
-    unwrapValue(await skipPrevious(sampleTracks[0]));
+    unwrapValue(await skipPrevious());
 
     final event = session.finish();
     expect(event, isNotNull);
@@ -58,7 +59,7 @@ void main() {
       trackedSession.start(sampleTracks[1].id);
       clock = clock.add(const Duration(seconds: 9));
 
-      unwrapValue(await trackedSkipPrevious(sampleTracks[0]));
+      unwrapValue(await trackedSkipPrevious());
 
       final events = unwrapValue(await library.getListeningEvents());
       expect(events, hasLength(1));

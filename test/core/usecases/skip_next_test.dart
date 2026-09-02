@@ -24,23 +24,24 @@ void main() {
   });
 
   test('advances to the next track in the queue', () async {
-    unwrapValue(await skipNext(sampleTracks[1]));
+    final track = unwrapValue(await skipNext());
 
+    expect(track, sampleTracks[1]);
     expect(playback.currentTrack, sampleTracks[1]);
   });
 
   test('propagates a failure when already at the end of the queue', () async {
     for (var i = 1; i < sampleTracks.length; i++) {
-      unwrapValue(await skipNext(sampleTracks[i]));
+      unwrapValue(await skipNext());
     }
 
-    final failure = unwrapFailure(await skipNext(sampleTracks[0]));
+    final failure = unwrapFailure(await skipNext());
 
     expect(failure, isA<NotFoundFailure>());
   });
 
   test('starts tracking the new current track after skipping', () async {
-    unwrapValue(await skipNext(sampleTracks[1]));
+    unwrapValue(await skipNext());
 
     final event = session.finish();
     expect(event, isNotNull);
@@ -56,7 +57,7 @@ void main() {
       trackedSession.start(sampleTracks[0].id);
       clock = clock.add(const Duration(seconds: 17));
 
-      unwrapValue(await trackedSkipNext(sampleTracks[1]));
+      unwrapValue(await trackedSkipNext());
 
       final events = unwrapValue(await library.getListeningEvents());
       expect(events, hasLength(1));

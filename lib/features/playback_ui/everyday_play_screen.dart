@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,6 +6,7 @@ import '../../app/playback_controller.dart';
 import '../../app/responsive.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/cover_art.dart';
+import '../../core/domain/playback_state.dart';
 
 /// Everyday Play — pushed, no nav bar, no mini-player (it *is* the
 /// player). Matches the "Everyday play" frame in
@@ -164,14 +165,34 @@ class EverydayPlayScreen extends ConsumerWidget {
                       SizedBox(height: gap(12)),
                       Padding(
                         padding: EdgeInsets.only(bottom: gap(24)),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.shuffle, size: 16, color: AppColors.mist),
-                            SizedBox(width: 38),
-                            Icon(Icons.repeat, size: 16, color: AppColors.mist),
-                            SizedBox(width: 38),
-                            Icon(Icons.queue_music, size: 16, color: AppColors.mist),
+                            GestureDetector(
+                              onTap: controller.toggleShuffle,
+                              child: Icon(
+                                Icons.shuffle,
+                                size: 16,
+                                color: uiState.playback.shuffle
+                                    ? AppColors.willow
+                                    : AppColors.mist,
+                              ),
+                            ),
+                            const SizedBox(width: 38),
+                            GestureDetector(
+                              onTap: controller.toggleRepeatMode,
+                              child: Icon(
+                                uiState.playback.repeatMode == RepeatMode.one
+                                    ? Icons.repeat_one
+                                    : Icons.repeat,
+                                size: 16,
+                                color: uiState.playback.repeatMode != RepeatMode.off
+                                    ? AppColors.willow
+                                    : AppColors.mist,
+                              ),
+                            ),
+                            const SizedBox(width: 38),
+                            const Icon(Icons.queue_music, size: 16, color: AppColors.mist),
                           ],
                         ),
                       ),

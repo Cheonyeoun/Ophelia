@@ -1,5 +1,6 @@
 import '../error/failure.dart';
 import '../error/result.dart';
+import 'playback_state.dart';
 import 'track.dart';
 
 /// Port for controlling audio playback, abstracting over "streamed" vs.
@@ -14,9 +15,21 @@ abstract interface class PlaybackEnginePort {
 
   Future<Result<void, Failure>> seek(Duration position);
 
-  Future<Result<void, Failure>> skipNext();
+  /// Advances to the next track per the engine's own queue position,
+  /// shuffle, and repeat mode, and returns the track it landed on — the
+  /// caller has no way to predict this itself once shuffle is involved.
+  Future<Result<Track, Failure>> skipNext();
 
-  Future<Result<void, Failure>> skipPrevious();
+  /// The previous-track equivalent of [skipNext].
+  Future<Result<Track, Failure>> skipPrevious();
 
   Future<Result<void, Failure>> setQueue(List<Track> tracks);
+
+  /// Enables or disables shuffled playback order for [skipNext] and
+  /// [skipPrevious].
+  Future<Result<void, Failure>> setShuffle(bool enabled);
+
+  /// Sets what happens once [skipNext]/[skipPrevious] would otherwise run
+  /// out of queue.
+  Future<Result<void, Failure>> setRepeatMode(RepeatMode repeatMode);
 }
