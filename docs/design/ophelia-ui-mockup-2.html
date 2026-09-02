@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ophelia — remaining screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0A0E; --ink:#16161C; --ink-2:#1D1D24;
+    --willow:#7E9B89; --bruise:#9483A0; --mist:#6E6E78;
+    --pale:#EDEDEF; --pale-dim:#B9B9C0;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:#050506; font-family:'Inter',sans-serif; padding:48px 24px; color:var(--pale); }
+  .intro{ max-width:760px; margin:0 auto 40px; }
+  .intro h1{ font-family:'Fraunces',serif; font-weight:500; font-size:28px; letter-spacing:-0.01em; margin-bottom:8px; }
+  .intro p{ color:var(--pale-dim); font-size:14px; line-height:1.6; max-width:600px; }
+  .frames{ display:flex; flex-wrap:wrap; gap:32px; justify-content:center; max-width:1500px; margin:0 auto; }
+  .frame-wrap{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .frame-label{ font-size:12px; color:var(--mist); letter-spacing:0.02em; }
+  .phone{ width:300px; height:640px; background:var(--void); border-radius:36px; border:1px solid #232329; overflow:hidden; position:relative; box-shadow:0 40px 80px rgba(0,0,0,0.5); display:flex; flex-direction:column; }
+
+  .top-bar{ display:flex; align-items:center; justify-content:space-between; padding:26px 20px 6px; }
+  .top-bar .title{ font-family:'Fraunces',serif; font-size:16px; font-weight:500; }
+  .scroll{ flex:1; overflow-y:auto; padding-bottom:12px; }
+
+  .cover-sm{ width:44px; height:44px; border-radius:8px; background:var(--ink-2); flex-shrink:0; }
+  .track-row{ display:flex; align-items:center; gap:12px; padding:9px 20px; }
+  .track-meta span{ display:block; font-size:13px; font-weight:500; }
+  .track-meta small{ font-size:11px; color:var(--mist); }
+
+  /* ---- Everyday play ---- */
+  .everyday{ height:100%; display:flex; flex-direction:column; }
+  .ed-top{ display:flex; justify-content:space-between; align-items:center; padding:24px 20px 0; }
+  .ed-cover{ width:200px; height:200px; border-radius:16px; margin:26px auto 22px; background:radial-gradient(circle at 30% 30%,#2c3a33,transparent 60%), radial-gradient(circle at 70% 70%,#3a3040,transparent 55%), var(--ink); }
+  .ed-title{ font-family:'Fraunces',serif; font-size:19px; font-weight:500; text-align:center; }
+  .ed-artist{ font-size:12px; color:var(--pale-dim); text-align:center; margin-bottom:22px; }
+  .flow-line{ height:1px; background:#2c2c32; border-radius:1px; position:relative; margin:0 24px 6px; }
+  .flow-line::after{ content:''; position:absolute; top:-1.5px; left:0; width:44%; height:4px; border-radius:2px; background:var(--willow); }
+  .time-row{ display:flex; justify-content:space-between; padding:0 24px; font-size:10px; color:var(--mist); margin-bottom:22px; }
+  .ed-transport{ display:flex; align-items:center; justify-content:center; gap:22px; margin-bottom:20px; }
+  .ed-transport .play{ width:54px; height:54px; border-radius:50%; background:var(--pale); display:flex; align-items:center; justify-content:center; }
+  .ed-secondary{ display:flex; justify-content:center; gap:38px; }
+
+  /* ---- Library ---- */
+  .segmented{ display:flex; gap:6px; padding:14px 20px 6px; }
+  .seg-chip{ font-size:12px; padding:6px 14px; border-radius:20px; background:var(--ink); color:var(--mist); }
+  .seg-chip.active{ background:var(--ink-2); color:var(--pale); border:1px solid var(--willow); }
+  .playlist-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:14px 20px; }
+  .pl-card{ height:110px; border-radius:14px; background:var(--ink-2); display:flex; flex-direction:column; justify-content:flex-end; padding:10px; }
+  .pl-card span{ font-size:12px; font-weight:500; }
+  .pl-card small{ font-size:10px; color:var(--mist); }
+
+  /* ---- Downloads ---- */
+  .storage-card{ margin:14px 20px; background:var(--ink); border-radius:14px; padding:14px; }
+  .storage-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--mist); margin-bottom:8px; }
+  .storage-track{ height:4px; border-radius:2px; background:#2c2c32; overflow:hidden; }
+  .storage-fill{ height:100%; width:38%; background:var(--willow); }
+  .dl-row{ display:flex; align-items:center; gap:12px; padding:9px 20px; }
+  .badge{ font-size:9px; padding:2px 7px; border-radius:6px; background:rgba(126,155,137,0.16); color:var(--willow); margin-left:auto; }
+
+  /* ---- Settings ---- */
+  .set-section-label{ font-size:11px; color:var(--mist); padding:18px 20px 6px; }
+  .set-row{ display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid #1b1b21; }
+  .set-row svg{ flex-shrink:0; }
+  .set-label{ font-size:13px; flex:1; }
+  .set-value{ font-size:12px; color:var(--mist); }
+  .toggle{ width:34px; height:20px; border-radius:10px; background:#2c2c32; position:relative; flex-shrink:0; }
+  .toggle.on{ background:var(--willow); }
+  .toggle::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--pale); }
+  .toggle.on::after{ left:16px; }
+
+  /* ---- Search ---- */
+  .search-bar{ margin:22px 20px 8px; display:flex; align-items:center; gap:10px; background:var(--ink); border-radius:14px; padding:11px 14px; color:var(--pale-dim); font-size:13px; }
+  .recent-label{ font-size:11px; color:var(--mist); padding:16px 20px 8px; }
+  .recent-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:7px 12px; border-radius:20px; background:var(--ink); color:var(--pale-dim); margin:0 8px 8px 0; }
+  .chip-row{ padding:0 16px; display:flex; flex-wrap:wrap; }
+  .filter-row{ display:flex; gap:6px; padding:14px 20px 4px; }
+
+  .note{ max-width:1100px; margin:36px auto 0; font-size:12px; color:var(--mist); text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Ophelia — remaining screens</h1>
+  <p>Same tokens carried through: void background, willow as the working accent, bruise held back for one moment only. Everyday play sits between the mini-player and immersive play — same flow-line progress, more chrome visible.</p>
+</div>
+
+<div class="frames">
+
+  <div class="frame-wrap">
+    <span class="frame-label">Everyday play</span>
+    <div class="phone">
+      <div class="everyday">
+        <div class="ed-top">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pale)" stroke-width="1.6"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          <span style="font-size:11px;color:var(--mist);">playing from Night drift</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </div>
+        <div class="ed-cover"></div>
+        <div class="ed-title">Low Tide</div>
+        <div class="ed-artist">Ossian Vale</div>
+        <div class="flow-line"></div>
+        <div class="time-row"><span>1:42</span><span>3:58</span></div>
+        <div class="ed-transport">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--pale-dim)"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v8h8"/><text x="12" y="15" font-size="7" fill="var(--pale-dim)" text-anchor="middle" stroke="none">10</text></svg>
+          <div class="play"><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--void)"><path d="M8 5v14l11-7z"/></svg></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M21 12a9 9 0 10-9 9"/><path d="M21 4v8h-8"/><text x="12" y="15" font-size="7" fill="var(--pale-dim)" text-anchor="middle" stroke="none">10</text></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--pale-dim)"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+        </div>
+        <div class="ed-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mist)" stroke-width="1.6"><path d="M17 3l4 4-4 4M3 7h18M7 21l-4-4 4-4M21 17H3"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mist)" stroke-width="1.6"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mist)" stroke-width="1.6"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-wrap">
+    <span class="frame-label">Library</span>
+    <div class="phone">
+      <div class="top-bar"><span class="title">Library</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></div>
+      <div class="segmented">
+        <div class="seg-chip active">Playlists</div>
+        <div class="seg-chip">Artists</div>
+        <div class="seg-chip">Albums</div>
+        <div class="seg-chip">Songs</div>
+      </div>
+      <div class="scroll">
+        <div class="playlist-grid">
+          <div class="pl-card"><span>Night drift</span><small>18 tracks</small></div>
+          <div class="pl-card"><span>Slow burn</span><small>24 tracks</small></div>
+          <div class="pl-card"><span>Rain window</span><small>9 tracks</small></div>
+          <div class="pl-card"><span>Late shift</span><small>31 tracks</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-wrap">
+    <span class="frame-label">Downloads</span>
+    <div class="phone">
+      <div class="top-bar"><span class="title">Downloads</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+      <div class="storage-card">
+        <div class="storage-row"><span>38.2 GB used</span><span>on this device</span></div>
+        <div class="storage-track"><div class="storage-fill"></div></div>
+      </div>
+      <div class="scroll">
+        <div class="dl-row"><div class="cover-sm"></div><div class="track-meta"><span>Marble & Ash</span><small>Wren Callahan · 8.4 MB</small></div><span class="badge">HQ</span></div>
+        <div class="dl-row"><div class="cover-sm"></div><div class="track-meta"><span>Low Tide</span><small>Ossian Vale · 7.1 MB</small></div><span class="badge">HQ</span></div>
+        <div class="dl-row"><div class="cover-sm"></div><div class="track-meta"><span>Quiet Rooms</span><small>Marta Solis · 6.9 MB</small></div><span class="badge">HQ</span></div>
+        <div class="dl-row"><div class="cover-sm"></div><div class="track-meta"><span>Salt Air</span><small>Wren Callahan · 9.2 MB</small></div><span class="badge">HQ</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-wrap">
+    <span class="frame-label">Settings</span>
+    <div class="phone">
+      <div class="top-bar"><span class="title">Settings</span><span></span></div>
+      <div class="scroll">
+        <div class="set-section-label">Playback</div>
+        <div class="set-row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span class="set-label">Streaming quality</span><span class="set-value">High</span></div>
+        <div class="set-row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><span class="set-label">Gapless playback</span><div class="toggle on"></div></div>
+        <div class="set-section-label">Downloads</div>
+        <div class="set-row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg><span class="set-label">Download quality</span><span class="set-value">Lossless</span></div>
+        <div class="set-row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M5 12h14M12 5l7 7-7 7"/></svg><span class="set-label">Wi-Fi only downloads</span><div class="toggle on"></div></div>
+        <div class="set-section-label">Media source</div>
+        <div class="set-row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg><span class="set-label">Connected server</span><span class="set-value">Home library</span></div>
+        <div class="set-section-label">Your data</div>
+        <div class="set-row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg><span class="set-label">Export library</span></div>
+        <div class="set-row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pale-dim)" stroke-width="1.6"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 5h16"/></svg><span class="set-label">Import library</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-wrap">
+    <span class="frame-label">Search</span>
+    <div class="phone">
+      <div class="search-bar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Search songs, artists, albums
+      </div>
+      <div class="filter-row">
+        <div class="seg-chip active">All</div>
+        <div class="seg-chip">Songs</div>
+        <div class="seg-chip">Artists</div>
+        <div class="seg-chip">Albums</div>
+      </div>
+      <div class="recent-label">Recent searches</div>
+      <div class="chip-row">
+        <span class="recent-chip">Ossian Vale</span>
+        <span class="recent-chip">slow burn</span>
+        <span class="recent-chip">Marta Solis</span>
+      </div>
+      <div class="scroll">
+        <div class="track-row"><div class="cover-sm"></div><div class="track-meta"><span>Low Tide</span><small>Ossian Vale · song</small></div></div>
+        <div class="track-row"><div class="cover-sm"></div><div class="track-meta"><span>Ossian Vale</span><small>artist</small></div></div>
+        <div class="track-row"><div class="cover-sm"></div><div class="track-meta"><span>Amber Light</span><small>Ossian Vale · song</small></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">Everyday play reuses immersive's flow-line and cover treatment · Settings surfaces the swappable media source as a first-class setting, matching the architecture underneath</p>
+
+</body>
+</html>
