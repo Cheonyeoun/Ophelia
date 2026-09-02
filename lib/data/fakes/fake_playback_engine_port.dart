@@ -16,6 +16,12 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   List<Track> queue = const [];
   bool isPlaying = false;
 
+  /// Position of [currentTrack] within [queue] — the source of truth for
+  /// skipNext/skipPrevious, set directly by [setQueue] and moved by ±1 on
+  /// skip. Kept separate from matching on [currentTrack]'s id or value so
+  /// duplicate tracks in the queue don't confuse navigation.
+  int currentIndex = -1;
+
   @override
   Future<Result<void, Failure>> play(Track track, String sourcePath) async {
     currentTrack = track;
@@ -39,37 +45,42 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
 
   @override
   Future<Result<void, Failure>> skipNext() async {
-    final current = currentTrack;
-    if (current == null || queue.isEmpty) {
-      return Result.failure(const NotFoundFailure('no track to skip from'));
-    }
-    final index = queue.indexWhere((track) => track.id == current.id);
-    if (index == -1 || index == queue.length - 1) {
+    if (currentIndex == -1 || currentIndex >= queue.length - 1) {
       return Result.failure(const NotFoundFailure('no next track'));
     }
-    currentTrack = queue[index + 1];
-    position = Duration.zero;
+    currentIndex++;
+    _moveToCurrentIndex();
     return const Result.success(null);
   }
 
   @override
   Future<Result<void, Failure>> skipPrevious() async {
-    final current = currentTrack;
-    if (current == null || queue.isEmpty) {
-      return Result.failure(const NotFoundFailure('no track to skip from'));
-    }
-    final index = queue.indexWhere((track) => track.id == current.id);
-    if (index <= 0) {
+    if (currentIndex <= 0) {
       return Result.failure(const NotFoundFailure('no previous track'));
     }
-    currentTrack = queue[index - 1];
-    position = Duration.zero;
+    currentIndex--;
+    _moveToCurrentIndex();
     return const Result.success(null);
   }
 
   @override
   Future<Result<void, Failure>> setQueue(List<Track> tracks) async {
     queue = List.unmodifiable(tracks);
+    currentIndex = queue.isEmpty ? -1 : 0;
     return const Result.success(null);
+  }
+
+  void _moveToCurrentIndex() {
+    final track = queue[currentIndex];
+    currentTrack = track;
+    // A placeholder path derived from the new track's id, just so this
+    // fake's exposed state is never internally inconsistent (a
+    // currentTrack whose currentSourcePath still points at the track it
+    // replaced). A real adapter will need to resolve the actual
+    // stream-vs-downloaded source on skip, the same way PlayTrack does
+    // (see core/usecases/play_track.dart) — an open design question for
+    // when that adapter is built, not solved here.
+    currentSourcePath = '/fake-source/${track.id}';
+    position = Duration.zero;
   }
 }

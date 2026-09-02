@@ -1,9 +1,9 @@
 import 'package:test/test.dart';
 import 'package:ophelia/core/domain/track.dart';
 import 'package:ophelia/core/error/failure.dart';
+import 'package:ophelia/core/usecases/listening_session.dart';
 import 'package:ophelia/core/usecases/play_track.dart';
 import 'package:ophelia/data/fakes/fake_download_port.dart';
-import 'package:ophelia/data/fakes/fake_local_library_port.dart';
 import 'package:ophelia/data/fakes/fake_media_source_port.dart';
 import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
@@ -14,34 +14,26 @@ void main() {
   late FakePlaybackEnginePort playback;
   late FakeMediaSourcePort mediaSource;
   late FakeDownloadPort downloads;
-  late FakeLocalLibraryPort library;
+  late ListeningSession session;
   late PlayTrack playTrack;
 
   setUp(() {
     playback = FakePlaybackEnginePort();
     mediaSource = FakeMediaSourcePort();
     downloads = FakeDownloadPort(seed: []);
-    library = FakeLocalLibraryPort(listeningEvents: []);
-    playTrack = PlayTrack(playback, mediaSource, downloads, library);
+    session = ListeningSession();
+    playTrack = PlayTrack(playback, mediaSource, downloads, session);
   });
 
-  test(
-    'plays a downloaded track from its local path and records a '
-    'listening event',
-    () async {
-      final track = sampleTracks.first;
-      await downloads.download(track);
+  test('plays a downloaded track from its local path', () async {
+    final track = sampleTracks.first;
+    await downloads.download(track);
 
-      unwrapValue(await playTrack(track));
+    unwrapValue(await playTrack(track));
 
-      expect(playback.currentTrack, track);
-      expect(playback.currentSourcePath, '/downloads/${track.id}.mp3');
-
-      final events = unwrapValue(await library.getListeningEvents());
-      expect(events, hasLength(1));
-      expect(events.single.trackId, track.id);
-    },
-  );
+    expect(playback.currentTrack, track);
+    expect(playback.currentSourcePath, '/downloads/${track.id}.mp3');
+  });
 
   test('streams a track that has not been downloaded', () async {
     final track = sampleTracks[2];
@@ -53,6 +45,16 @@ void main() {
       playback.currentSourcePath,
       'https://stream.ophelia.fake/${track.id}',
     );
+  });
+
+  test('starts tracking a listening session for the played track', () async {
+    final track = sampleTracks.first;
+
+    unwrapValue(await playTrack(track));
+
+    final event = session.finish();
+    expect(event, isNotNull);
+    expect(event!.trackId, track.id);
   });
 
   test(

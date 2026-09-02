@@ -26,8 +26,9 @@ class ComputeTopSongs {
         }
         final ranked = playCounts.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
+        final safeLimit = limit < 0 ? 0 : limit;
         return Result.success(
-          ranked.take(limit).map((entry) => entry.key).toList(),
+          ranked.take(safeLimit).map((entry) => entry.key).toList(),
         );
       case ResultFailure(failure: final f):
         return Result.failure(f);

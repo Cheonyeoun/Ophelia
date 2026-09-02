@@ -54,4 +54,17 @@ void main() {
 
     expect(ranked, hasLength(2));
   });
+
+  test('returns an empty result instead of throwing for a negative limit', () async {
+    final library = FakeLocalLibraryPort(
+      listeningEvents: buildSampleListeningEvents(),
+    );
+    final computeTopSongs = ComputeTopSongs(library);
+
+    final ranked = unwrapValue(
+      await computeTopSongs(window: const Duration(days: 7), limit: -1),
+    );
+
+    expect(ranked, isEmpty);
+  });
 }

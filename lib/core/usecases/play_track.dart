@@ -1,22 +1,27 @@
 import '../domain/download_port.dart';
-import '../domain/listening_event.dart';
-import '../domain/local_library_port.dart';
 import '../domain/media_source_port.dart';
 import '../domain/playback_engine_port.dart';
 import '../domain/track.dart';
 import '../error/failure.dart';
 import '../error/result.dart';
+import 'listening_session.dart';
 
 /// Plays [track] from its local copy if downloaded, otherwise streams it —
 /// the "download-first, stream-fallback" flow (docs/architecture.md
-/// §3.2) — then records a listening event.
+/// §3.2) — then starts tracking its listening time.
+///
+/// This does not finalize any track that was already playing — only
+/// `PauseTrack`, `SkipNext`, and `SkipPrevious` do that (see
+/// listening_session.dart). Calling `PlayTrack` again for a different
+/// track while one is already playing, without going through skip,
+/// silently drops that track's partial listening time; not solved here.
 class PlayTrack {
   final PlaybackEnginePort playback;
   final MediaSourcePort mediaSource;
   final DownloadPort downloads;
-  final LocalLibraryPort library;
+  final ListeningSession session;
 
-  PlayTrack(this.playback, this.mediaSource, this.downloads, this.library);
+  PlayTrack(this.playback, this.mediaSource, this.downloads, this.session);
 
   Future<Result<void, Failure>> call(Track track) async {
     final isDownloadedResult = await downloads.isDownloaded(track.id);
@@ -47,8 +52,7 @@ class PlayTrack {
         return Result.failure(f);
     }
 
-    return library.recordListeningEvent(
-      ListeningEvent(trackId: track.id, playedAt: DateTime.now(), msPlayed: 0),
-    );
+    session.start(track.id);
+    return const Result.success(null);
   }
 }
