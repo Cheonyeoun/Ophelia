@@ -1,6 +1,6 @@
 /// Either a successful [T] value or an [F] failure — returned by port and
 /// use case methods instead of throwing exceptions across layers (see
-/// Docs/Architecture.md §8). Pure Dart — no Flutter, no package imports.
+/// docs/architecture.md §8). Pure Dart — no Flutter, no package imports.
 ///
 /// Match on the concrete case with a switch pattern:
 /// ```dart

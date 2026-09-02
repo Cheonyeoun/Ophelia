@@ -6,7 +6,7 @@ import 'user_profile.dart';
 
 /// Port for local persistence of playlists, the user profile, and
 /// listening history — the source of truth for everything except raw
-/// audio bytes (see Docs/Architecture.md §1, §3.1). Implemented by an
+/// audio bytes (see docs/architecture.md §1, §3.1). Implemented by an
 /// adapter under lib/data/local_db/ (see §3.3) — the domain only depends
 /// on this interface.
 abstract interface class LocalLibraryPort {

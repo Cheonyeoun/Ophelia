@@ -1,5 +1,5 @@
 /// Base type for domain-level failures returned by ports and use cases
-/// instead of exceptions crossing layers (see Docs/Architecture.md §8).
+/// instead of exceptions crossing layers (see docs/architecture.md §8).
 /// Pure Dart — no Flutter, no package imports.
 sealed class Failure {
   final String message;

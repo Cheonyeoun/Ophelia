@@ -3,7 +3,7 @@ import '../error/result.dart';
 import 'track.dart';
 
 /// Port for controlling audio playback, abstracting over "streamed" vs.
-/// "downloaded" sources (see Docs/Architecture.md §3.1, §7). Implemented
+/// "downloaded" sources (see docs/architecture.md §3.1, §7). Implemented
 /// by an adapter under lib/playback/engine/ (see §3.3) — the domain only
 /// depends on this interface.
 abstract interface class PlaybackEnginePort {
