@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/layout_metrics.dart';
 import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
@@ -45,6 +46,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = ref.watch(bottomContentInsetProvider);
+
     return Scaffold(
       backgroundColor: AppColors.void_,
       appBar: const ScreenTopBar(),
@@ -95,6 +98,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   )
                 : ListView(
+                    padding: EdgeInsets.only(bottom: bottomInset),
                     children: [
                       for (final track in _results)
                         TrackRow(

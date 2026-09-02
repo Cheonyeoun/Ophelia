@@ -10,9 +10,11 @@ import '../features/playback_ui/immersive_play_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
+import 'layout_metrics.dart';
 import 'playback_controller.dart';
 import 'theme.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'widgets/measure_size.dart';
 import 'widgets/mini_player_bar.dart';
 
 /// Navigation shell composition root — implements the exact contract from
@@ -128,13 +130,19 @@ class AppShell extends ConsumerWidget {
             Positioned(
               left: 12,
               right: 12,
-              bottom: (_isRootTabRoute ? kNavBarHeight : 0) + 8,
-              child: MiniPlayerBar(
-                track: track,
-                isPlaying: isPlaying,
-                onTap: () => context.push('/everyday-play'),
-                onPlayPause: () =>
-                    ref.read(playbackControllerProvider.notifier).togglePlayPause(),
+              bottom: (_isRootTabRoute ? kNavBarHeight : 0) + kMiniPlayerGap,
+              child: MeasureSize(
+                onChange: (size) => ref
+                    .read(miniPlayerHeightProvider.notifier)
+                    .report(size.height),
+                child: MiniPlayerBar(
+                  track: track,
+                  isPlaying: isPlaying,
+                  onTap: () => context.push('/everyday-play'),
+                  onPlayPause: () => ref
+                      .read(playbackControllerProvider.notifier)
+                      .togglePlayPause(),
+                ),
               ),
             ),
         ],

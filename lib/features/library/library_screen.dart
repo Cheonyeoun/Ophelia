@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/layout_metrics.dart';
 import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
@@ -70,10 +71,11 @@ class _PlaylistsGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final playlists = ref.watch(playlistsProvider);
+    final bottomInset = ref.watch(bottomContentInsetProvider);
     return playlists.when(
       data: (data) => GridView.count(
         crossAxisCount: 2,
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
         mainAxisSpacing: 14,
         crossAxisSpacing: 14,
         childAspectRatio: 1.4,
@@ -137,6 +139,7 @@ class _TrackDerivedList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tracks = ref.watch(allTracksProvider);
+    final bottomInset = ref.watch(bottomContentInsetProvider);
     return tracks.when(
       data: (data) {
         final values = <String>{};
@@ -145,7 +148,7 @@ class _TrackDerivedList extends ConsumerWidget {
         }
         final sorted = values.toList()..sort();
         return ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: EdgeInsets.fromLTRB(0, 8, 0, 8 + bottomInset),
           children: [
             for (final value in sorted)
               TrackRow(
@@ -167,9 +170,10 @@ class _SongsList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tracks = ref.watch(allTracksProvider);
+    final bottomInset = ref.watch(bottomContentInsetProvider);
     return tracks.when(
       data: (data) => ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.fromLTRB(0, 8, 0, 8 + bottomInset),
         children: [
           for (final track in data)
             TrackRow(

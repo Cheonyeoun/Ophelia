@@ -9,12 +9,23 @@ import 'package:ophelia/main.dart';
 
 /// The rest of this test suite runs at flutter_test's default (desktop-
 /// sized, 800x600) surface, which is wide enough to hide a layout
-/// overflow that only shows up at actual phone widths. These tests pump
-/// every screen at a real phone size (375x812, matching the mockups'
-/// frame dimensions in docs/design/) and assert nothing overflows.
+/// overflow that only shows up at actual phone widths — that's exactly
+/// how the mini-player-overlaps-content bug got through undetected. These
+/// tests pump every screen at three representative phone sizes and
+/// assert nothing overflows at any of them, with and without the
+/// mini-player showing.
 void main() {
-  Future<ProviderContainer> pumpAppAtPhoneSize(WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(375, 812));
+  const sizes = {
+    'small phone (360x640)': Size(360, 640),
+    'standard phone (390x844)': Size(390, 844),
+    'large phone (430x932)': Size(430, 932),
+  };
+
+  Future<ProviderContainer> pumpAppAtSize(
+    WidgetTester tester,
+    Size size,
+  ) async {
+    await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(const ProviderScope(child: OpheliaApp()));
@@ -22,64 +33,84 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(OpheliaApp)));
   }
 
-  testWidgets('root tabs do not overflow at phone width', (tester) async {
-    final container = await pumpAppAtPhoneSize(tester);
-    final router = container.read(routerProvider);
+  for (final MapEntry(key: sizeLabel, value: size) in sizes.entries) {
+    group(sizeLabel, () {
+      testWidgets('root tabs do not overflow', (tester) async {
+        final container = await pumpAppAtSize(tester, size);
+        final router = container.read(routerProvider);
 
-    expect(tester.takeException(), isNull); // /home, the initial route
+        expect(tester.takeException(), isNull, reason: '/home');
 
-    router.go('/library');
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull, reason: '/library');
+        router.go('/library');
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '/library');
 
-    router.go('/settings');
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull, reason: '/settings');
-  });
+        router.go('/settings');
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '/settings');
+      });
 
-  testWidgets('pushed screens do not overflow at phone width', (tester) async {
-    final container = await pumpAppAtPhoneSize(tester);
-    final router = container.read(routerProvider);
+      testWidgets('pushed screens do not overflow', (tester) async {
+        final container = await pumpAppAtSize(tester, size);
+        final router = container.read(routerProvider);
 
-    for (final path in ['/search', '/downloads', '/profile']) {
-      router.push(path);
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: path);
-      router.pop();
-      await tester.pumpAndSettle();
-    }
-  });
+        for (final path in ['/search', '/downloads', '/profile']) {
+          router.push(path);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull, reason: path);
+          router.pop();
+          await tester.pumpAndSettle();
+        }
+      });
 
-  testWidgets('player screens do not overflow at phone width', (tester) async {
-    final container = await pumpAppAtPhoneSize(tester);
-    final router = container.read(routerProvider);
+      testWidgets(
+        'root tabs and pushed screens do not overflow once a track is '
+        'loaded (the mini-player is now showing on all of them)',
+        (tester) async {
+          final container = await pumpAppAtSize(tester, size);
+          final router = container.read(routerProvider);
 
-    // Both player screens render transport controls only once a track is
-    // loaded, so load one first via the controller directly.
-    await container
-        .read(playbackControllerProvider.notifier)
-        .play(sampleTracks.first, queue: sampleTracks);
-    await tester.pumpAndSettle();
+          await container
+              .read(playbackControllerProvider.notifier)
+              .play(sampleTracks.first, queue: sampleTracks);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull, reason: '/home');
 
-    router.push('/everyday-play');
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull, reason: '/everyday-play');
+          for (final path in ['/library', '/settings']) {
+            router.go(path);
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull, reason: path);
+          }
 
-    router.push('/immersive-play');
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull, reason: '/immersive-play');
-  });
+          for (final path in ['/search', '/downloads', '/profile']) {
+            router.push(path);
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull, reason: path);
+            router.pop();
+            await tester.pumpAndSettle();
+          }
+        },
+      );
 
-  testWidgets('the mini-player itself does not overflow at phone width', (
-    tester,
-  ) async {
-    final container = await pumpAppAtPhoneSize(tester);
+      testWidgets('player screens do not overflow', (tester) async {
+        final container = await pumpAppAtSize(tester, size);
+        final router = container.read(routerProvider);
 
-    await container
-        .read(playbackControllerProvider.notifier)
-        .play(sampleTracks.first, queue: sampleTracks);
-    await tester.pumpAndSettle();
+        // Both player screens render transport controls only once a
+        // track is loaded, so load one first via the controller directly.
+        await container
+            .read(playbackControllerProvider.notifier)
+            .play(sampleTracks.first, queue: sampleTracks);
+        await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-  });
+        router.push('/everyday-play');
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '/everyday-play');
+
+        router.push('/immersive-play');
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '/immersive-play');
+      });
+    });
+  }
 }

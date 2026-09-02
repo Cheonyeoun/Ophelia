@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/layout_metrics.dart';
 import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
@@ -22,6 +23,7 @@ class DownloadsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final downloaded = ref.watch(downloadedTracksProvider);
+    final bottomInset = ref.watch(bottomContentInsetProvider);
 
     return Scaffold(
       backgroundColor: AppColors.void_,
@@ -35,6 +37,7 @@ class DownloadsScreen extends ConsumerWidget {
                 ),
               )
             : ListView(
+                padding: EdgeInsets.only(bottom: bottomInset),
                 children: [
                   for (final track in tracks) _DownloadRow(track: track, queue: tracks),
                 ],
