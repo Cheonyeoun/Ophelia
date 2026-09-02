@@ -15,17 +15,23 @@ class PlaybackState {
   final RepeatMode repeatMode;
   final bool shuffle;
 
-  const PlaybackState({
+  /// Defensively copies [queue] into an unmodifiable list so mutating the
+  /// caller's list after construction can't change this instance.
+  PlaybackState({
     this.currentTrack,
     required this.position,
-    required this.queue,
+    required List<Track> queue,
     required this.isImmersive,
     required this.repeatMode,
     required this.shuffle,
-  });
+  }) : queue = List.unmodifiable(queue);
 
+  /// Set [clearCurrentTrack] to clear [currentTrack] to null — passing
+  /// [currentTrack] alone can't distinguish "leave unchanged" from "set to
+  /// null".
   PlaybackState copyWith({
     Track? currentTrack,
+    bool clearCurrentTrack = false,
     Duration? position,
     List<Track>? queue,
     bool? isImmersive,
@@ -33,7 +39,8 @@ class PlaybackState {
     bool? shuffle,
   }) {
     return PlaybackState(
-      currentTrack: currentTrack ?? this.currentTrack,
+      currentTrack:
+          clearCurrentTrack ? null : (currentTrack ?? this.currentTrack),
       position: position ?? this.position,
       queue: queue ?? this.queue,
       isImmersive: isImmersive ?? this.isImmersive,

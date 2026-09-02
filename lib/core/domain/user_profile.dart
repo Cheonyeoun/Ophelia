@@ -11,15 +11,24 @@ class UserProfile {
     this.profileImagePath,
   });
 
+  /// Set [clearBackgroundImagePath]/[clearProfileImagePath] to clear the
+  /// corresponding path to null — passing the path alone can't distinguish
+  /// "leave unchanged" from "set to null".
   UserProfile copyWith({
     String? displayName,
     String? backgroundImagePath,
+    bool clearBackgroundImagePath = false,
     String? profileImagePath,
+    bool clearProfileImagePath = false,
   }) {
     return UserProfile(
       displayName: displayName ?? this.displayName,
-      backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
-      profileImagePath: profileImagePath ?? this.profileImagePath,
+      backgroundImagePath: clearBackgroundImagePath
+          ? null
+          : (backgroundImagePath ?? this.backgroundImagePath),
+      profileImagePath: clearProfileImagePath
+          ? null
+          : (profileImagePath ?? this.profileImagePath),
     );
   }
 

@@ -47,4 +47,13 @@ void main() {
     expect(updated.title, album.title);
     expect(updated.coverArtPath, album.coverArtPath);
   });
+
+  test('copyWith(clearCoverArtPath: true) sets coverArtPath to null', () {
+    final updated = album.copyWith(clearCoverArtPath: true);
+
+    expect(updated.coverArtPath, isNull);
+    expect(updated.id, album.id);
+    expect(updated.title, album.title);
+    expect(updated.artist, album.artist);
+  });
 }

@@ -20,9 +20,9 @@ void main() {
     sourceType: TrackSourceType.downloaded,
   );
 
-  const state = PlaybackState(
+  final state = PlaybackState(
     currentTrack: trackA,
-    position: Duration(seconds: 30),
+    position: const Duration(seconds: 30),
     queue: [trackA, trackB],
     isImmersive: false,
     repeatMode: RepeatMode.off,
@@ -39,9 +39,9 @@ void main() {
   });
 
   test('two instances with the same values are equal', () {
-    const other = PlaybackState(
+    final other = PlaybackState(
       currentTrack: trackA,
-      position: Duration(seconds: 30),
+      position: const Duration(seconds: 30),
       queue: [trackA, trackB],
       isImmersive: false,
       repeatMode: RepeatMode.off,
@@ -53,9 +53,9 @@ void main() {
   });
 
   test('a differing queue makes instances unequal', () {
-    const other = PlaybackState(
+    final other = PlaybackState(
       currentTrack: trackA,
-      position: Duration(seconds: 30),
+      position: const Duration(seconds: 30),
       queue: [trackB, trackA],
       isImmersive: false,
       repeatMode: RepeatMode.off,
@@ -77,5 +77,37 @@ void main() {
     expect(updated.position, state.position);
     expect(updated.queue, state.queue);
     expect(updated.shuffle, state.shuffle);
+  });
+
+  test('copyWith(clearCurrentTrack: true) sets currentTrack to null', () {
+    final updated = state.copyWith(clearCurrentTrack: true);
+
+    expect(updated.currentTrack, isNull);
+    expect(updated.position, state.position);
+    expect(updated.queue, state.queue);
+    expect(updated.isImmersive, state.isImmersive);
+    expect(updated.repeatMode, state.repeatMode);
+    expect(updated.shuffle, state.shuffle);
+  });
+
+  test('mutating the source list after construction does not affect the '
+      'playback state', () {
+    final source = [trackA, trackB];
+    final defensive = PlaybackState(
+      position: const Duration(seconds: 5),
+      queue: source,
+      isImmersive: false,
+      repeatMode: RepeatMode.off,
+      shuffle: false,
+    );
+
+    source.add(trackA);
+    source.clear();
+
+    expect(defensive.queue, [trackA, trackB]);
+  });
+
+  test('queue cannot be mutated directly', () {
+    expect(() => state.queue.add(trackA), throwsUnsupportedError);
   });
 }

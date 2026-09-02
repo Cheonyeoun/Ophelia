@@ -5,11 +5,13 @@ class Playlist {
   final String name;
   final List<String> trackIds;
 
-  const Playlist({
+  /// Defensively copies [trackIds] into an unmodifiable list so mutating
+  /// the caller's list after construction can't change this instance.
+  Playlist({
     required this.id,
     required this.name,
-    required this.trackIds,
-  });
+    required List<String> trackIds,
+  }) : trackIds = List.unmodifiable(trackIds);
 
   Playlist copyWith({
     String? id,

@@ -22,6 +22,9 @@ class Track {
     required this.sourceType,
   });
 
+  /// Set [clearCoverArtPath] to clear [coverArtPath] to null — passing
+  /// [coverArtPath] alone can't distinguish "leave unchanged" from "set to
+  /// null".
   Track copyWith({
     String? id,
     String? title,
@@ -29,6 +32,7 @@ class Track {
     String? album,
     int? durationMs,
     String? coverArtPath,
+    bool clearCoverArtPath = false,
     TrackSourceType? sourceType,
   }) {
     return Track(
@@ -37,7 +41,8 @@ class Track {
       artist: artist ?? this.artist,
       album: album ?? this.album,
       durationMs: durationMs ?? this.durationMs,
-      coverArtPath: coverArtPath ?? this.coverArtPath,
+      coverArtPath:
+          clearCoverArtPath ? null : (coverArtPath ?? this.coverArtPath),
       sourceType: sourceType ?? this.sourceType,
     );
   }

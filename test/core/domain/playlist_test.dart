@@ -2,7 +2,7 @@ import 'package:test/test.dart';
 import 'package:ophelia/core/domain/playlist.dart';
 
 void main() {
-  const playlist = Playlist(
+  final playlist = Playlist(
     id: 'p1',
     name: 'My playlist',
     trackIds: ['t1', 't2', 't3'],
@@ -15,7 +15,7 @@ void main() {
   });
 
   test('two instances with the same values are equal', () {
-    const other = Playlist(
+    final other = Playlist(
       id: 'p1',
       name: 'My playlist',
       trackIds: ['t1', 't2', 't3'],
@@ -26,7 +26,7 @@ void main() {
   });
 
   test('a differing track order makes instances unequal', () {
-    const other = Playlist(
+    final other = Playlist(
       id: 'p1',
       name: 'My playlist',
       trackIds: ['t2', 't1', 't3'],
@@ -41,5 +41,20 @@ void main() {
     expect(updated.trackIds, ['t3', 't2', 't1']);
     expect(updated.id, playlist.id);
     expect(updated.name, playlist.name);
+  });
+
+  test('mutating the source list after construction does not affect the '
+      'playlist', () {
+    final source = ['t1', 't2', 't3'];
+    final defensive = Playlist(id: 'p2', name: 'Defensive', trackIds: source);
+
+    source.add('t4');
+    source[0] = 'changed';
+
+    expect(defensive.trackIds, ['t1', 't2', 't3']);
+  });
+
+  test('trackIds cannot be mutated directly', () {
+    expect(() => playlist.trackIds.add('t4'), throwsUnsupportedError);
   });
 }

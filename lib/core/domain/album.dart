@@ -13,17 +13,22 @@ class Album {
     this.coverArtPath,
   });
 
+  /// Set [clearCoverArtPath] to clear [coverArtPath] to null — passing
+  /// [coverArtPath] alone can't distinguish "leave unchanged" from "set to
+  /// null".
   Album copyWith({
     String? id,
     String? title,
     String? artist,
     String? coverArtPath,
+    bool clearCoverArtPath = false,
   }) {
     return Album(
       id: id ?? this.id,
       title: title ?? this.title,
       artist: artist ?? this.artist,
-      coverArtPath: coverArtPath ?? this.coverArtPath,
+      coverArtPath:
+          clearCoverArtPath ? null : (coverArtPath ?? this.coverArtPath),
     );
   }
 
