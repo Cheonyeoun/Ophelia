@@ -2,11 +2,11 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/playback_controller.dart';
 import '../../app/responsive.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/cover_art.dart';
 import '../../core/domain/playback_state.dart';
+import 'playback_controller.dart';
 
 /// Everyday Play — pushed, no nav bar, no mini-player (it *is* the
 /// player). Matches the "Everyday play" frame in

@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ophelia/app/layout_metrics.dart';
-import 'package:ophelia/app/playback_controller.dart';
 import 'package:ophelia/app/theme.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
+import 'package:ophelia/features/playback_ui/playback_controller.dart';
 
 /// Direct coverage of the mechanism behind the mini-player-overlap fix —
 /// separate from test/app/mobile_layout_test.dart, which only proves

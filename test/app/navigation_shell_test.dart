@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ophelia/app/playback_controller.dart';
 import 'package:ophelia/app/router.dart';
 import 'package:ophelia/app/widgets/bottom_nav_bar.dart';
 import 'package:ophelia/app/widgets/mini_player_bar.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
+import 'package:ophelia/features/playback_ui/playback_controller.dart';
 import 'package:ophelia/main.dart';
 
 /// Widget tests for the navigation shell contract in docs/architecture.md

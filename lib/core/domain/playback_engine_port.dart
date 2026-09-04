@@ -3,6 +3,14 @@ import '../error/result.dart';
 import 'playback_state.dart';
 import 'track.dart';
 
+/// Opaque token capturing everything [PlaybackEnginePort] tracks about
+/// where playback is *positioned* — queue, current index, shuffle
+/// history — at the moment [PlaybackEnginePort.captureNavigationState]
+/// was called. Each adapter defines its own concrete subtype; a token is
+/// only ever passed back to the same engine instance that produced it,
+/// via [PlaybackEnginePort.restoreNavigationState].
+abstract interface class PlaybackNavigationSnapshot {}
+
 /// Port for controlling audio playback, abstracting over "streamed" vs.
 /// "downloaded" sources (see docs/architecture.md §3.1, §7). Implemented
 /// by an adapter under lib/playback/engine/ (see §3.3) — the domain only
@@ -26,7 +34,7 @@ abstract interface class PlaybackEnginePort {
   /// Resumes whatever track is already loaded — e.g. after [pause] — at
   /// its current position, without touching the queue or shuffle history
   /// the way a fresh [play] call does. See
-  /// app/playback_controller.dart's `togglePlayPause`.
+  /// features/playback_ui/playback_controller.dart's `togglePlayPause`.
   Future<Result<void, Failure>> resume();
 
   Future<Result<void, Failure>> pause();
@@ -51,9 +59,22 @@ abstract interface class PlaybackEnginePort {
   /// out of queue.
   Future<Result<void, Failure>> setRepeatMode(RepeatMode repeatMode);
 
-  /// The engine's current queue — read, not just written, so a caller
-  /// (e.g. `PlayTrack`) can capture it before committing a new one and
-  /// restore it if a later step fails, instead of leaving the engine
-  /// navigating a queue the UI never actually reflected.
-  List<Track> get queue;
+  /// Captures the engine's queue, current index, and shuffle history as a
+  /// single opaque token, so a caller (e.g. `PlayTrack`) can restore all
+  /// of it atomically via [restoreNavigationState] if a later step fails.
+  /// These three only make sense together — restoring just the queue
+  /// (and leaving current index or shuffle history pointing at whatever a
+  /// failed attempt left them at) can leave the engine internally
+  /// inconsistent even though the queue itself looks right.
+  PlaybackNavigationSnapshot captureNavigationState();
+
+  /// Restores navigation state previously captured by
+  /// [captureNavigationState], undoing whatever [setQueue], [play],
+  /// [skipNext], or [skipPrevious] calls happened on this engine since —
+  /// so a failed [play] can leave the engine exactly as it was before the
+  /// attempt: correct current track, correct index, correct shuffle
+  /// history.
+  Future<Result<void, Failure>> restoreNavigationState(
+    PlaybackNavigationSnapshot snapshot,
+  );
 }

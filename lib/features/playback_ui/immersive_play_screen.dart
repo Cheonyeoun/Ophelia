@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/playback_controller.dart';
 import '../../app/responsive.dart';
 import '../../app/theme.dart';
+import 'playback_controller.dart';
 
 /// Immersive Play — pushed, no nav bar, no mini-player. Matches the
 /// "Immersive play" frame in docs/design/ophelia-ui-mockup.html: full-

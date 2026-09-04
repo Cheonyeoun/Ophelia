@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/layout_metrics.dart';
-import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/screen_top_bar.dart';
 import '../../app/widgets/track_row.dart';
 import '../../core/domain/track.dart';
+import '../playback_ui/playback_controller.dart';
 
 /// Downloads — pushed from Library/Settings, no nav bar, mini-player
 /// still shown. Matches the "Downloads" frame in

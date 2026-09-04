@@ -23,8 +23,10 @@ import 'listening_session.dart';
 /// fails) never touches the engine at all. Once the queue *is* committed,
 /// the engine needs it set before [PlaybackEnginePort.play] can position
 /// itself correctly, so a failure from `play` itself is repaired by
-/// restoring the engine's prior queue — a failed play must never leave
-/// the engine navigating a queue the UI never showed.
+/// restoring the engine's full prior navigation state (queue, current
+/// index, and shuffle history together — see
+/// `PlaybackEnginePort.captureNavigationState`) — a failed play must
+/// never leave the engine navigating state the UI never showed.
 ///
 /// This does not finalize any track that was already playing — only
 /// `PauseTrack`, `SkipNext`, and `SkipPrevious` do that (see
@@ -64,7 +66,7 @@ class PlayTrack {
         return Result.failure(f);
     }
 
-    final priorQueue = playback.queue;
+    final priorState = playback.captureNavigationState();
     final setQueueResult = await playback.setQueue(queue ?? [track]);
     switch (setQueueResult) {
       case Success():
@@ -82,7 +84,7 @@ class PlayTrack {
       case Success():
         break;
       case ResultFailure(failure: final f):
-        await playback.setQueue(priorQueue);
+        await playback.restoreNavigationState(priorState);
         return Result.failure(f);
     }
 

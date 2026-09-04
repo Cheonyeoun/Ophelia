@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/domain/playback_state.dart';
-import '../core/domain/playlist.dart';
-import '../core/domain/track.dart';
-import '../core/error/result.dart';
-import '../core/usecases/toggle_repeat_mode.dart';
-import 'providers.dart';
+import '../../app/providers.dart';
+import '../../core/domain/playback_state.dart';
+import '../../core/domain/playlist.dart';
+import '../../core/domain/track.dart';
+import '../../core/error/result.dart';
+import '../../core/usecases/toggle_repeat_mode.dart';
 
 /// Presentation-layer view of playback: the domain [PlaybackState] plus
 /// `isPlaying`, which the domain entity doesn't track (see
@@ -179,6 +179,12 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// [state] (the first tap's own update hasn't landed yet while its
   /// `await` is in flight) and compute the same target, instead of each
   /// toggling from the other's result.
+  ///
+  /// On failure, only the `shuffle` field is flipped back — read off
+  /// [state] as it is *at that point*, not the `previous` snapshot from
+  /// before the `await`. Restoring the whole snapshot would clobber any
+  /// other change (a skip, a seek, another toggle) that completed on
+  /// [state] while this call was awaiting the engine.
   Future<void> toggleShuffle() async {
     final previous = state.playback;
     final target = !previous.shuffle;
@@ -186,12 +192,16 @@ class PlaybackController extends Notifier<PlaybackUiState> {
 
     final result = await ref.read(toggleShuffleProvider)(previous);
     if (result case ResultFailure()) {
-      state = state.copyWith(playback: previous);
+      state = state.copyWith(
+        playback: state.playback.copyWith(shuffle: previous.shuffle),
+      );
     }
   }
 
   /// The repeat-mode equivalent of [toggleShuffle] — see its doc comment
-  /// for why the target is computed synchronously up front.
+  /// for why the target is computed synchronously up front and why a
+  /// failure only flips `repeatMode` back on the live [state], not a
+  /// pre-await snapshot.
   Future<void> toggleRepeatMode() async {
     final previous = state.playback;
     final target = ToggleRepeatMode.next(previous.repeatMode);
@@ -199,7 +209,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
 
     final result = await ref.read(toggleRepeatModeProvider)(previous);
     if (result case ResultFailure()) {
-      state = state.copyWith(playback: previous);
+      state = state.copyWith(
+        playback: state.playback.copyWith(repeatMode: previous.repeatMode),
+      );
     }
   }
 }

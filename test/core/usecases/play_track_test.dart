@@ -15,8 +15,9 @@ import '../../support/result_test_helpers.dart';
 
 /// Wraps a [FakePlaybackEnginePort], but always fails [play] — lets a test
 /// exercise `PlayTrack`'s rollback path (restoring the engine's prior
-/// queue when `play` fails after `setQueue` already succeeded) without
-/// needing a real engine that can actually fail to play something.
+/// navigation state when `play` fails after `setQueue` already succeeded)
+/// without needing a real engine that can actually fail to play
+/// something.
 class _PlayFailingEngine implements PlaybackEnginePort {
   final FakePlaybackEnginePort inner;
 
@@ -60,7 +61,14 @@ class _PlayFailingEngine implements PlaybackEnginePort {
       inner.setRepeatMode(repeatMode);
 
   @override
-  List<Track> get queue => inner.queue;
+  PlaybackNavigationSnapshot captureNavigationState() =>
+      inner.captureNavigationState();
+
+  @override
+  Future<Result<void, Failure>> restoreNavigationState(
+    PlaybackNavigationSnapshot snapshot,
+  ) =>
+      inner.restoreNavigationState(snapshot);
 }
 
 void main() {
@@ -163,9 +171,19 @@ void main() {
   );
 
   test(
-    'restores the engine\'s prior queue when play itself fails after the '
-    'queue was already committed',
+    'restores the engine\'s full prior navigation state -- current track, '
+    'index, and shuffle history, not just the queue -- when play itself '
+    'fails after the queue was already committed',
     () async {
+      // Build up real navigation state (not just a queue) to prove it's
+      // all restored together: play, enable shuffle, and skip once so
+      // there's shuffle history a fresh setQueue would otherwise wipe.
+      await playback.setQueue(sampleTracks);
+      await playback.play(sampleTracks[0], 'src');
+      await playback.setShuffle(true);
+      final priorTrack = unwrapValue(await playback.skipNext());
+      final priorIndex = playback.currentIndex;
+
       final failingEngine = _PlayFailingEngine(playback);
       final playTrackWithFailingEngine = PlayTrack(
         failingEngine,
@@ -173,22 +191,26 @@ void main() {
         downloads,
         session,
       );
-      final priorQueue = [sampleTracks[3], sampleTracks[4]];
-      await playback.setQueue(priorQueue);
 
       final failure = unwrapFailure(
         await playTrackWithFailingEngine(
-          sampleTracks[0],
-          queue: [sampleTracks[0], sampleTracks[1]],
+          sampleTracks[3],
+          queue: [sampleTracks[3], sampleTracks[4]],
         ),
       );
 
       expect(failure, isA<StorageFailure>());
       // The engine briefly had the new queue committed (play() needs it
-      // set to position itself) but PlayTrack rolled it back once play
-      // failed, so the engine is left navigating the same queue the UI
-      // still shows -- not the one from the failed attempt.
-      expect(playback.queue, priorQueue);
+      // set to position itself) but PlayTrack rolled the whole snapshot
+      // back once play failed -- not just the queue.
+      expect(playback.currentTrack, priorTrack);
+      expect(playback.currentIndex, priorIndex);
+      expect(playback.queue, sampleTracks);
+      // If shuffle history hadn't been restored too (a fresh setQueue
+      // resets it to a single-entry round), this would fail instead of
+      // undoing the shuffle pick made above.
+      final back = unwrapValue(await playback.skipPrevious());
+      expect(back, sampleTracks[0]);
     },
   );
 

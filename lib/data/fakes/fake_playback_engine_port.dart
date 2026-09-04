@@ -6,6 +6,29 @@ import '../../core/domain/track.dart';
 import '../../core/error/failure.dart';
 import '../../core/error/result.dart';
 
+/// [FakePlaybackEnginePort]'s [PlaybackNavigationSnapshot] — every field
+/// [captureNavigationState] needs to fully undo a failed attempt, taken
+/// together rather than piecemeal (see that method's doc comment).
+class _NavigationSnapshot implements PlaybackNavigationSnapshot {
+  final Track? currentTrack;
+  final String? currentSourcePath;
+  final Duration position;
+  final bool isPlaying;
+  final List<Track> queue;
+  final int currentIndex;
+  final List<int> shuffleHistory;
+
+  _NavigationSnapshot({
+    required this.currentTrack,
+    required this.currentSourcePath,
+    required this.position,
+    required this.isPlaying,
+    required this.queue,
+    required this.currentIndex,
+    required this.shuffleHistory,
+  });
+}
+
 /// **Temporary, UI-development-only fake — not a production adapter.**
 ///
 /// In-memory stand-in for [PlaybackEnginePort] that tracks the "playing"
@@ -16,7 +39,6 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   Track? currentTrack;
   String? currentSourcePath;
   Duration position = Duration.zero;
-  @override
   List<Track> queue = const [];
   bool isPlaying = false;
   bool shuffle = false;
@@ -154,6 +176,34 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   @override
   Future<Result<void, Failure>> setRepeatMode(RepeatMode mode) async {
     repeatMode = mode;
+    return const Result.success(null);
+  }
+
+  @override
+  PlaybackNavigationSnapshot captureNavigationState() => _NavigationSnapshot(
+        currentTrack: currentTrack,
+        currentSourcePath: currentSourcePath,
+        position: position,
+        isPlaying: isPlaying,
+        queue: queue,
+        currentIndex: currentIndex,
+        shuffleHistory: List.unmodifiable(_shuffleHistory),
+      );
+
+  @override
+  Future<Result<void, Failure>> restoreNavigationState(
+    PlaybackNavigationSnapshot snapshot,
+  ) async {
+    final s = snapshot as _NavigationSnapshot;
+    currentTrack = s.currentTrack;
+    currentSourcePath = s.currentSourcePath;
+    position = s.position;
+    isPlaying = s.isPlaying;
+    queue = s.queue;
+    currentIndex = s.currentIndex;
+    _shuffleHistory
+      ..clear()
+      ..addAll(s.shuffleHistory);
     return const Result.success(null);
   }
 

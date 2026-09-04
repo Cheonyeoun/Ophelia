@@ -16,7 +16,8 @@ class ToggleRepeatMode {
   /// caller (e.g. `PlaybackController`) can compute the target value
   /// itself before firing off the async engine call, rather than deriving
   /// it from state that may be stale by the time an earlier in-flight
-  /// toggle's `await` resolves — see app/playback_controller.dart's
+  /// toggle's `await` resolves — see
+  /// features/playback_ui/playback_controller.dart's
   /// `toggleRepeatMode`.
   static RepeatMode next(RepeatMode current) =>
       _cycle[(_cycle.indexOf(current) + 1) % _cycle.length];

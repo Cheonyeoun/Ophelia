@@ -68,7 +68,7 @@ A production-grade Flutter music player. This document is the single source of t
 - `MediaSourcePort`: `search(query)`, `getStreamUrl(trackId)`, `getTrackMetadata(trackId)`, `getCoverArt(trackId)`
 - `LocalLibraryPort`: CRUD for playlists, profile, listening events
 - `DownloadPort`: `download(track)`, `deleteDownload(trackId)`, `isDownloaded(trackId)`
-- `PlaybackEnginePort`: `play(track, sourcePath, {queueIndex})`, `resume()`, `pause()`, `seek(duration)`, `skipNext()`, `skipPrevious()`, `setQueue(tracks)`, `setShuffle(enabled)`, `setRepeatMode(mode)`, `queue` (getter)
+- `PlaybackEnginePort`: `play(track, sourcePath, {queueIndex})`, `resume()`, `pause()`, `seek(duration)`, `skipNext()`, `skipPrevious()`, `setQueue(tracks)`, `setShuffle(enabled)`, `setRepeatMode(mode)`, `captureNavigationState()`, `restoreNavigationState(snapshot)`
 - `ExportImportPort`: `exportBundle() -> File`, `importBundle(File)`
 
 **Why ports live in the domain, not infrastructure:** the domain decides what it needs. Infrastructure adapts to the domain's contract — never the other way around. This is the "dependency inversion" in SOLID, made concrete.
