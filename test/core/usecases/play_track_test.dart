@@ -17,11 +17,14 @@ import '../../support/result_test_helpers.dart';
 /// exercise `PlayTrack`'s rollback path (restoring the engine's prior
 /// navigation state when `play` fails after `setQueue` already succeeded)
 /// without needing a real engine that can actually fail to play
-/// something.
+/// something. If [failRestore] is set, [restoreNavigationState] fails
+/// too, so a test can exercise `PlayTrack`'s handling of a rollback that
+/// itself doesn't succeed.
 class _PlayFailingEngine implements PlaybackEnginePort {
   final FakePlaybackEnginePort inner;
+  final bool failRestore;
 
-  _PlayFailingEngine(this.inner);
+  _PlayFailingEngine(this.inner, {this.failRestore = false});
 
   @override
   Future<Result<void, Failure>> play(
@@ -67,8 +70,12 @@ class _PlayFailingEngine implements PlaybackEnginePort {
   @override
   Future<Result<void, Failure>> restoreNavigationState(
     PlaybackNavigationSnapshot snapshot,
-  ) =>
-      inner.restoreNavigationState(snapshot);
+  ) async {
+    if (failRestore) {
+      return Result.failure(const StorageFailure('engine rejected restore'));
+    }
+    return inner.restoreNavigationState(snapshot);
+  }
 }
 
 void main() {
@@ -211,6 +218,37 @@ void main() {
       // undoing the shuffle pick made above.
       final back = unwrapValue(await playback.skipPrevious());
       expect(back, sampleTracks[0]);
+    },
+  );
+
+  test(
+    'surfaces an EngineInconsistentFailure, wrapping both failures, when '
+    'the rollback after a failed play itself fails',
+    () async {
+      await playback.setQueue(sampleTracks);
+      await playback.play(sampleTracks[0], 'src');
+
+      final failingEngine = _PlayFailingEngine(playback, failRestore: true);
+      final playTrackWithFailingEngine = PlayTrack(
+        failingEngine,
+        mediaSource,
+        downloads,
+        session,
+      );
+
+      final failure = unwrapFailure(
+        await playTrackWithFailingEngine(
+          sampleTracks[3],
+          queue: [sampleTracks[3], sampleTracks[4]],
+        ),
+      );
+
+      // Discarding the rollback's own failure would hide that the engine
+      // may now be lying about its state -- it must show up in what's
+      // returned, not just the original play failure.
+      final inconsistent = failure as EngineInconsistentFailure;
+      expect(inconsistent.cause, isA<StorageFailure>());
+      expect(inconsistent.rollbackFailure, isA<StorageFailure>());
     },
   );
 

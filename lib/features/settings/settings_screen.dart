@@ -5,14 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../app/layout_metrics.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
-import 'settings_state.dart';
 
 /// The Settings root tab — matches the "Settings" frame in
 /// docs/design/ophelia-ui-mockup-2.html. Every toggle/value row is wired
-/// to [settingsControllerProvider] (see settings_state.dart) so it
-/// visibly changes and holds state on tap — real persistence is a future
-/// LocalLibraryPort/SettingsPort adapter. Export and Import library call
-/// the real use cases.
+/// to `settingsControllerProvider` (declared in app/providers.dart; the
+/// `SettingsController` it wraps lives in settings_state.dart), which
+/// calls one use case per action against `SettingsPort` — real
+/// persistence is a future adapter for that port; `FakeSettingsPort`
+/// stands in with in-memory storage until then. Export and Import
+/// library call the real use cases too.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 

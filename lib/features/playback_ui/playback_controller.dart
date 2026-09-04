@@ -36,6 +36,27 @@ class PlaybackUiState {
   }
 }
 
+/// Minimal `Future`-chaining mutex — no external package needed for
+/// something this small. Each [run] call waits for every previously
+/// queued [run] call to finish (success *or* failure) before its own
+/// [action] starts, so calls to [PlaybackController]'s playback-mutating
+/// methods can never interleave: whichever is called second simply waits
+/// its turn instead of racing the first for the engine and `state`. This
+/// replaces patching each individual race (a skip landing mid-toggle, two
+/// concurrent plays, ...) with a single structural guarantee.
+class _AsyncMutex {
+  Future<void> _tail = Future.value();
+
+  Future<T> run<T>(Future<T> Function() action) {
+    final result = _tail.then((_) => action());
+    // The next caller waits on this call finishing, not on whether it
+    // succeeded — a failed action must not jam the queue for whatever's
+    // queued after it.
+    _tail = result.then((_) {}, onError: (_) {});
+    return result;
+  }
+}
+
 /// Coordinates the playback use cases and exposes the result to screens
 /// via Riverpod — screens call use cases through this controller, never
 /// through ports/fakes directly (docs/architecture.md §3.4). The engine
@@ -43,10 +64,17 @@ class PlaybackUiState {
 /// decide the next index under shuffle/repeat — see
 /// core/usecases/skip_next.dart.
 ///
+/// Every method that mutates playback state runs through [_mutex], so two
+/// calls (e.g. a rapid `play` and `toggleShuffle`, or two concurrent
+/// `skipNext`s) are always fully serialized rather than racing each other
+/// for the engine and `state` — see [_AsyncMutex].
+///
 /// Failures from the underlying use cases are not yet surfaced to the UI
 /// (e.g. as a snackbar) — every method just leaves the state unchanged on
 /// failure. Not solved here.
 class PlaybackController extends Notifier<PlaybackUiState> {
+  final _mutex = _AsyncMutex();
+
   @override
   PlaybackUiState build() => PlaybackUiState.initial();
 
@@ -58,7 +86,13 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// came from) is the one place that unambiguously knows this, so it's
   /// passed through rather than re-derived by searching the queue for a
   /// value-equal track (see core/domain/playback_engine_port.dart).
-  Future<void> play(
+  Future<void> play(Track track, {List<Track>? queue, int queueIndex = 0}) {
+    return _mutex.run(
+      () => _play(track, queue: queue, queueIndex: queueIndex),
+    );
+  }
+
+  Future<void> _play(
     Track track, {
     List<Track>? queue,
     int queueIndex = 0,
@@ -82,6 +116,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   }
 
   /// Resolves [playlist] to tracks and starts playing it from the top.
+  /// Not itself serialized against other playback-mutating calls — it
+  /// only mutates playback state via the (already-serialized) [play]
+  /// below, so wrapping it too would deadlock waiting on itself.
   Future<void> playPlaylist(Playlist playlist) async {
     final result = await ref.read(buildQueueProvider)(playlist);
     switch (result) {
@@ -93,7 +130,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     }
   }
 
-  Future<void> pause() async {
+  Future<void> pause() => _mutex.run(_pause);
+
+  Future<void> _pause() async {
     final result = await ref.read(pauseTrackProvider)();
     if (result case ResultFailure()) return;
     state = state.copyWith(isPlaying: false);
@@ -103,7 +142,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// [play], this never re-commits the queue, so it can't reset shuffle
   /// history the way re-entering [play] on resume used to (see
   /// core/usecases/resume_track.dart).
-  Future<void> resume() async {
+  Future<void> resume() => _mutex.run(_resume);
+
+  Future<void> _resume() async {
     final track = state.playback.currentTrack;
     if (track == null) return;
     final result = await ref.read(resumeTrackProvider)(track);
@@ -111,6 +152,8 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     state = state.copyWith(isPlaying: true);
   }
 
+  /// Delegates to the already-serialized [pause]/[resume] — see
+  /// [playPlaylist] for why this itself isn't also wrapped in the mutex.
   Future<void> togglePlayPause() async {
     if (state.isPlaying) {
       await pause();
@@ -119,7 +162,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     }
   }
 
-  Future<void> skipNext() async {
+  Future<void> skipNext() => _mutex.run(_skipNext);
+
+  Future<void> _skipNext() async {
     final result = await ref.read(skipNextProvider)();
     switch (result) {
       case Success(value: final track):
@@ -135,7 +180,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     }
   }
 
-  Future<void> skipPrevious() async {
+  Future<void> skipPrevious() => _mutex.run(_skipPrevious);
+
+  Future<void> _skipPrevious() async {
     final result = await ref.read(skipPreviousProvider)();
     switch (result) {
       case Success(value: final track):
@@ -151,7 +198,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     }
   }
 
-  Future<void> seekBy(Duration offset) async {
+  Future<void> seekBy(Duration offset) => _mutex.run(() => _seekBy(offset));
+
+  Future<void> _seekBy(Duration offset) async {
     final result = await ref.read(seekByProvider)(
       currentPosition: state.playback.position,
       offset: offset,
@@ -166,6 +215,8 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     );
   }
 
+  /// Purely synchronous — no `await` means no interleaving is possible,
+  /// so this doesn't need [_mutex] the way the async methods above do.
   void toggleImmersive() {
     state = state.copyWith(
       playback: ref.read(toggleImmersiveProvider)(state.playback),
@@ -175,17 +226,18 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// Toggles shuffle. The target value is computed synchronously, from
   /// [state] as it is right now, *before* the `await` below — and applied
   /// to [state] immediately — rather than read again once the engine call
-  /// resolves. Otherwise two rapid taps both read the same pre-toggle
-  /// [state] (the first tap's own update hasn't landed yet while its
-  /// `await` is in flight) and compute the same target, instead of each
-  /// toggling from the other's result.
+  /// resolves. This is now belt-and-suspenders given [_mutex] already
+  /// rules out a concurrent call starting before this one finishes, but
+  /// it's kept since it's still correct and cheap.
   ///
   /// On failure, only the `shuffle` field is flipped back — read off
   /// [state] as it is *at that point*, not the `previous` snapshot from
   /// before the `await`. Restoring the whole snapshot would clobber any
   /// other change (a skip, a seek, another toggle) that completed on
   /// [state] while this call was awaiting the engine.
-  Future<void> toggleShuffle() async {
+  Future<void> toggleShuffle() => _mutex.run(_toggleShuffle);
+
+  Future<void> _toggleShuffle() async {
     final previous = state.playback;
     final target = !previous.shuffle;
     state = state.copyWith(playback: previous.copyWith(shuffle: target));
@@ -202,7 +254,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// for why the target is computed synchronously up front and why a
   /// failure only flips `repeatMode` back on the live [state], not a
   /// pre-await snapshot.
-  Future<void> toggleRepeatMode() async {
+  Future<void> toggleRepeatMode() => _mutex.run(_toggleRepeatMode);
+
+  Future<void> _toggleRepeatMode() async {
     final previous = state.playback;
     final target = ToggleRepeatMode.next(previous.repeatMode);
     state = state.copyWith(playback: previous.copyWith(repeatMode: target));

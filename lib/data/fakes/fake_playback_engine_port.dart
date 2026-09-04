@@ -65,6 +65,14 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
     String sourcePath, {
     int queueIndex = 0,
   }) async {
+    if (queue.isEmpty || queueIndex < 0 || queueIndex >= queue.length) {
+      return Result.failure(
+        NotFoundFailure(
+          'queueIndex $queueIndex is out of range for a queue of '
+          '${queue.length} track(s)',
+        ),
+      );
+    }
     currentTrack = track;
     currentSourcePath = sourcePath;
     position = Duration.zero;

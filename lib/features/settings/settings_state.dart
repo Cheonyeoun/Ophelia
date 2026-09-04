@@ -1,92 +1,53 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// UI-only settings state — every row on the Settings screen holds and
-/// reflects what the user tapped, but nothing here is persisted yet.
-/// Real persistence is a future LocalLibraryPort/SettingsPort adapter;
-/// this is presentation-layer state standing in for it until then, not
-/// something reached through a use case.
-///
-/// **Deliberate, temporary exception to docs/architecture.md §3.4**
-/// ("screens call use cases through providers"): [SettingsController]
-/// bundles all five settings actions into one `Notifier` instead of one
-/// use-case-per-action, because there's no real `SettingsPort`/adapter
-/// yet for individual use cases to route to — a use case with nothing to
-/// call but "update in-memory UI state" doesn't earn its own class. This
-/// should be revisited and split into one use case per action once real
-/// settings persistence exists (tracked in docs/architecture.md §12).
-class SettingsState {
-  final String streamingQuality;
-  final bool gaplessPlayback;
-  final String downloadQuality;
-  final bool wifiOnlyDownloads;
-  final String connectedServer;
+import '../../app/providers.dart';
+import '../../core/domain/settings.dart';
+import '../../core/error/result.dart';
 
-  const SettingsState({
-    this.streamingQuality = 'High',
-    this.gaplessPlayback = true,
-    this.downloadQuality = 'Lossless',
-    this.wifiOnlyDownloads = true,
-    this.connectedServer = 'Home library',
-  });
-
-  SettingsState copyWith({
-    String? streamingQuality,
-    bool? gaplessPlayback,
-    String? downloadQuality,
-    bool? wifiOnlyDownloads,
-    String? connectedServer,
-  }) {
-    return SettingsState(
-      streamingQuality: streamingQuality ?? this.streamingQuality,
-      gaplessPlayback: gaplessPlayback ?? this.gaplessPlayback,
-      downloadQuality: downloadQuality ?? this.downloadQuality,
-      wifiOnlyDownloads: wifiOnlyDownloads ?? this.wifiOnlyDownloads,
-      connectedServer: connectedServer ?? this.connectedServer,
-    );
-  }
-}
-
-class SettingsController extends Notifier<SettingsState> {
-  static const _streamingQualities = ['Low', 'Normal', 'High'];
-  static const _downloadQualities = ['Standard', 'High', 'Lossless'];
-  static const _servers = ['Home library', 'Backup library'];
-
+/// Presentation-layer Notifier over the domain [Settings] entity. Each
+/// method calls exactly one use case (see
+/// core/usecases/set_streaming_quality.dart and its four siblings), which
+/// reads/writes through `SettingsPort` — this class holds no settings
+/// logic of its own. No UI-only field needs to ride alongside [Settings]
+/// the way `PlaybackController` adds `isPlaying` to `PlaybackState`, so
+/// the Notifier's state is the domain entity directly rather than a
+/// separate wrapper type.
+class SettingsController extends Notifier<Settings> {
   @override
-  SettingsState build() => const SettingsState();
+  Settings build() => Settings.defaults;
 
-  void cycleStreamingQuality() {
-    state = state.copyWith(
-      streamingQuality: _next(_streamingQualities, state.streamingQuality),
-    );
+  Future<void> cycleStreamingQuality() async {
+    final result = await ref.read(setStreamingQualityProvider)();
+    if (result case Success(value: final updated)) {
+      state = updated;
+    }
   }
 
-  void toggleGaplessPlayback() {
-    state = state.copyWith(gaplessPlayback: !state.gaplessPlayback);
+  Future<void> toggleGaplessPlayback() async {
+    final result = await ref.read(toggleGaplessPlaybackProvider)();
+    if (result case Success(value: final updated)) {
+      state = updated;
+    }
   }
 
-  void cycleDownloadQuality() {
-    state = state.copyWith(
-      downloadQuality: _next(_downloadQualities, state.downloadQuality),
-    );
+  Future<void> cycleDownloadQuality() async {
+    final result = await ref.read(setDownloadQualityProvider)();
+    if (result case Success(value: final updated)) {
+      state = updated;
+    }
   }
 
-  void toggleWifiOnlyDownloads() {
-    state = state.copyWith(wifiOnlyDownloads: !state.wifiOnlyDownloads);
+  Future<void> toggleWifiOnlyDownloads() async {
+    final result = await ref.read(toggleWifiOnlyDownloadsProvider)();
+    if (result case Success(value: final updated)) {
+      state = updated;
+    }
   }
 
-  void cycleConnectedServer() {
-    state = state.copyWith(
-      connectedServer: _next(_servers, state.connectedServer),
-    );
-  }
-
-  String _next(List<String> options, String current) {
-    final index = options.indexOf(current);
-    return options[(index + 1) % options.length];
+  Future<void> cycleConnectedServer() async {
+    final result = await ref.read(setConnectedServerProvider)();
+    if (result case Success(value: final updated)) {
+      state = updated;
+    }
   }
 }
-
-final settingsControllerProvider =
-    NotifierProvider<SettingsController, SettingsState>(
-  SettingsController.new,
-);

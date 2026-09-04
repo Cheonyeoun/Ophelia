@@ -26,7 +26,11 @@ import 'listening_session.dart';
 /// restoring the engine's full prior navigation state (queue, current
 /// index, and shuffle history together — see
 /// `PlaybackEnginePort.captureNavigationState`) — a failed play must
-/// never leave the engine navigating state the UI never showed.
+/// never leave the engine navigating state the UI never showed. If that
+/// restore itself fails, the returned failure is an
+/// [EngineInconsistentFailure] wrapping both — silently discarding the
+/// restore's own failure would hide that the engine might now be lying
+/// about its own state.
 ///
 /// This does not finalize any track that was already playing — only
 /// `PauseTrack`, `SkipNext`, and `SkipPrevious` do that (see
@@ -84,8 +88,17 @@ class PlayTrack {
       case Success():
         break;
       case ResultFailure(failure: final f):
-        await playback.restoreNavigationState(priorState);
-        return Result.failure(f);
+        final restoreResult = await playback.restoreNavigationState(
+          priorState,
+        );
+        switch (restoreResult) {
+          case Success():
+            return Result.failure(f);
+          case ResultFailure(failure: final rollbackFailure):
+            return Result.failure(
+              EngineInconsistentFailure(f, rollbackFailure),
+            );
+        }
     }
 
     session.start(track.id);

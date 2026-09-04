@@ -25,6 +25,10 @@ abstract interface class PlaybackEnginePort {
   /// than once in the queue, the same class of bug already fixed in
   /// [skipNext]/[skipPrevious] by tracking position with an index instead
   /// of matching on the track itself.
+  ///
+  /// An adapter must reject a [queueIndex] outside the current queue's
+  /// bounds (or an empty queue) with a [Result.failure] rather than
+  /// letting it crash on first use, leaving all state untouched.
   Future<Result<void, Failure>> play(
     Track track,
     String sourcePath, {

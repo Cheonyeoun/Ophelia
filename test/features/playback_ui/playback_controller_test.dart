@@ -13,31 +13,36 @@ import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
 import 'package:ophelia/features/playback_ui/playback_controller.dart';
 
-/// Wraps a [FakePlaybackEnginePort], but always fails [setShuffle] --
-/// only once [readyToFail] completes, so a test can force a toggle's
-/// engine call to still be pending while a *different* concurrent
-/// operation (e.g. a skip) runs to completion, then let the toggle fail
-/// afterward on a schedule the test controls instead of hoping for a
-/// particular microtask interleaving.
-class _ShuffleSetFailingEngine implements PlaybackEnginePort {
+/// Wraps a [FakePlaybackEnginePort], but holds [play] open until
+/// [playGate] completes, and records each call it forwards to [inner] (in
+/// arrival order) into [callOrder]. Lets a test prove
+/// [PlaybackController]'s mutex actually serializes two different
+/// methods: if `toggleShuffle`'s `setShuffle` call showed up in
+/// [callOrder] before `play`'s gate was released, the controller would be
+/// letting the two interleave instead of queuing one behind the other.
+class _GatedEngine implements PlaybackEnginePort {
   final FakePlaybackEnginePort inner;
-  final Completer<void> readyToFail;
+  final Completer<void> playGate;
+  final List<String> callOrder;
 
-  _ShuffleSetFailingEngine(this.inner, this.readyToFail);
-
-  @override
-  Future<Result<void, Failure>> setShuffle(bool enabled) async {
-    await readyToFail.future;
-    return Result.failure(const StorageFailure('shuffle rejected'));
-  }
+  _GatedEngine(this.inner, this.playGate, this.callOrder);
 
   @override
   Future<Result<void, Failure>> play(
     Track track,
     String sourcePath, {
     int queueIndex = 0,
-  }) =>
-      inner.play(track, sourcePath, queueIndex: queueIndex);
+  }) async {
+    await playGate.future;
+    callOrder.add('play');
+    return inner.play(track, sourcePath, queueIndex: queueIndex);
+  }
+
+  @override
+  Future<Result<void, Failure>> setShuffle(bool enabled) async {
+    callOrder.add('setShuffle');
+    return inner.setShuffle(enabled);
+  }
 
   @override
   Future<Result<void, Failure>> resume() => inner.resume();
@@ -77,7 +82,9 @@ class _ShuffleSetFailingEngine implements PlaybackEnginePort {
 /// Covers the fix for rapid double-taps on shuffle/repeat: each tap must
 /// compute its target from the *other* tap's result, not from the same
 /// stale pre-toggle value both taps happened to read (see
-/// playback_controller.dart's toggleShuffle/toggleRepeatMode).
+/// playback_controller.dart's toggleShuffle/toggleRepeatMode) -- and,
+/// structurally, the mutex in playback_controller.dart that now
+/// serializes every playback-mutating method against every other one.
 void main() {
   test(
     'two rapid shuffle taps each toggle from the other\'s result, landing '
@@ -133,49 +140,50 @@ void main() {
   );
 
   test(
-    'a toggle failure only reverts its own field, preserving a skip that '
-    'completed on the live state while the toggle was still awaiting the '
-    'engine',
+    'play and toggleShuffle fired concurrently are fully serialized -- '
+    'toggleShuffle never reaches the engine until play has -- with no '
+    'corrupted final state',
     () async {
-      final readyToFail = Completer<void>();
-      final failingEngine = _ShuffleSetFailingEngine(
+      final playGate = Completer<void>();
+      final callOrder = <String>[];
+      final gatedEngine = _GatedEngine(
         FakePlaybackEnginePort(),
-        readyToFail,
+        playGate,
+        callOrder,
       );
       final container = ProviderContainer(
-        overrides: [playbackEngineProvider.overrideWithValue(failingEngine)],
+        overrides: [playbackEngineProvider.overrideWithValue(gatedEngine)],
       );
       addTearDown(container.dispose);
       final controller = container.read(playbackControllerProvider.notifier);
-      await controller.play(
+
+      // play() is called first and immediately blocks inside the engine's
+      // play() (via playGate). toggleShuffle() is called second, while
+      // play() is still in flight.
+      final playFuture = controller.play(
         sampleTracks[0],
         queue: sampleTracks,
         queueIndex: 0,
       );
+      final toggleFuture = controller.toggleShuffle();
 
-      // Start the toggle -- it optimistically flips `shuffle` right away,
-      // then suspends awaiting the engine call, which won't resolve until
-      // `readyToFail` completes below.
-      final toggle = controller.toggleShuffle();
-      // Let a *different* state change fully land on the live state while
-      // the toggle is still pending.
-      await controller.skipNext();
-      expect(
-        container.read(playbackControllerProvider).playback.currentTrack,
-        sampleTracks[1],
-      );
+      // The mutex means toggleShuffle's whole body -- including its call
+      // to setShuffle -- can't even start until play's action finishes,
+      // which can't happen until playGate is released. So at this point,
+      // regardless of how many microtasks have run, setShuffle cannot
+      // have been called yet.
+      await Future<void>.delayed(Duration.zero);
+      expect(callOrder, isEmpty);
 
-      // Now let the toggle's engine call fail, and its failure handler
-      // run -- after the skip above already completed.
-      readyToFail.complete();
-      await toggle;
+      playGate.complete();
+      await Future.wait([playFuture, toggleFuture]);
 
+      // Both calls landed, strictly in the order they were made.
+      expect(callOrder, ['play', 'setShuffle']);
       final playback = container.read(playbackControllerProvider).playback;
-      // The failed toggle must only revert `shuffle` -- restoring the
-      // whole pre-toggle snapshot would clobber the skip's currentTrack
-      // update with the track that was playing before the toggle started.
-      expect(playback.currentTrack, sampleTracks[1]);
-      expect(playback.shuffle, isFalse);
+      expect(playback.currentTrack, sampleTracks[0]);
+      expect(playback.queue, sampleTracks);
+      expect(playback.shuffle, isTrue);
     },
   );
 }

@@ -72,6 +72,43 @@ void main() {
   );
 
   test(
+    'rejects an out-of-range queueIndex instead of crashing on it later',
+    () async {
+      final playback = FakePlaybackEnginePort();
+      await playback.setQueue(sampleTracks);
+
+      final tooHigh = unwrapFailure(
+        await playback.play(sampleTracks[0], 'src', queueIndex: 99),
+      );
+      expect(tooHigh, isA<NotFoundFailure>());
+
+      final negative = unwrapFailure(
+        await playback.play(sampleTracks[0], 'src', queueIndex: -1),
+      );
+      expect(negative, isA<NotFoundFailure>());
+
+      // A rejected play must leave the engine exactly as it was, not
+      // half-applied.
+      expect(playback.currentTrack, isNull);
+      expect(playback.currentIndex, 0);
+      expect(playback.isPlaying, isFalse);
+    },
+  );
+
+  test(
+    'rejects any queueIndex when the queue is empty',
+    () async {
+      final playback = FakePlaybackEnginePort();
+
+      final failure = unwrapFailure(
+        await playback.play(sampleTracks[0], 'src', queueIndex: 0),
+      );
+
+      expect(failure, isA<NotFoundFailure>());
+    },
+  );
+
+  test(
     'keeps currentSourcePath consistent with currentTrack after skipping '
     'forward',
     () async {
