@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/layout_metrics.dart';
-import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/cover_art.dart';
 import '../../app/widgets/screen_top_bar.dart';
 import '../../app/widgets/track_row.dart';
+import '../playback_ui/playback_controller.dart';
 
 /// Profile — pushed from Settings, no nav bar, mini-player still shown.
 /// Matches the "Profile" frame in docs/design/ophelia-ui-mockup.html:
@@ -63,13 +63,13 @@ class ProfileScreen extends ConsumerWidget {
           topSongs.when(
             data: (data) => Column(
               children: [
-                for (final track in data)
+                for (final (index, track) in data.indexed)
                   TrackRow(
                     title: track.title,
                     subtitle: track.artist,
                     onTap: () => ref
                         .read(playbackControllerProvider.notifier)
-                        .play(track, queue: data),
+                        .play(track, queue: data, queueIndex: index),
                   ),
               ],
             ),

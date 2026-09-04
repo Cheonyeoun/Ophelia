@@ -7,24 +7,22 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 
 /// The Settings root tab — matches the "Settings" frame in
-/// docs/design/ophelia-ui-mockup-2.html. Playback/download/server rows
-/// are decorative (no SettingsPort exists yet to persist them); Export
-/// and Import library call the real use cases.
-class SettingsScreen extends ConsumerStatefulWidget {
+/// docs/design/ophelia-ui-mockup-2.html. Every toggle/value row is wired
+/// to `settingsControllerProvider` (declared in app/providers.dart; the
+/// `SettingsController` it wraps lives in settings_state.dart), which
+/// calls one use case per action against `SettingsPort` — real
+/// persistence is a future adapter for that port; `FakeSettingsPort`
+/// stands in with in-memory storage until then. Export and Import
+/// library call the real use cases too.
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _gaplessPlayback = true;
-  bool _wifiOnlyDownloads = true;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider);
     final bottomInset = ref.watch(bottomContentInsetProvider);
+    final settings = ref.watch(settingsControllerProvider);
+    final settingsController = ref.read(settingsControllerProvider.notifier);
 
     return SafeArea(
       bottom: false,
@@ -45,28 +43,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             orElse: () => const SizedBox.shrink(),
           ),
           const _SectionLabel('Playback'),
-          const _SettingRow(
+          _SettingRow(
             icon: Icons.equalizer_outlined,
             label: 'Streaming quality',
-            value: 'High',
+            value: settings.streamingQuality,
+            onTap: settingsController.cycleStreamingQuality,
           ),
           _SettingRow(
             icon: Icons.auto_awesome_outlined,
             label: 'Gapless playback',
-            toggleValue: _gaplessPlayback,
-            onToggle: (v) => setState(() => _gaplessPlayback = v),
+            toggleValue: settings.gaplessPlayback,
+            onToggle: (_) => settingsController.toggleGaplessPlayback(),
+            onTap: settingsController.toggleGaplessPlayback,
           ),
           const _SectionLabel('Downloads'),
-          const _SettingRow(
+          _SettingRow(
             icon: Icons.high_quality_outlined,
             label: 'Download quality',
-            value: 'Lossless',
+            value: settings.downloadQuality,
+            onTap: settingsController.cycleDownloadQuality,
           ),
           _SettingRow(
             icon: Icons.wifi_outlined,
             label: 'Wi-Fi only downloads',
-            toggleValue: _wifiOnlyDownloads,
-            onToggle: (v) => setState(() => _wifiOnlyDownloads = v),
+            toggleValue: settings.wifiOnlyDownloads,
+            onToggle: (_) => settingsController.toggleWifiOnlyDownloads(),
+            onTap: settingsController.toggleWifiOnlyDownloads,
           ),
           _SettingRow(
             icon: Icons.download_outlined,
@@ -74,10 +76,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () => context.push('/downloads'),
           ),
           const _SectionLabel('Media source'),
-          const _SettingRow(
+          _SettingRow(
             icon: Icons.dns_outlined,
             label: 'Connected server',
-            value: 'Home library',
+            value: settings.connectedServer,
+            onTap: settingsController.cycleConnectedServer,
           ),
           const _SectionLabel('Your data'),
           _SettingRow(

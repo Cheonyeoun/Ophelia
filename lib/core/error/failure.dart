@@ -36,3 +36,22 @@ class StorageFailure extends Failure {
 class DecodeFailure extends Failure {
   const DecodeFailure([super.message = 'Decode error']);
 }
+
+/// An operation failed, and an attempt to roll the system back to its
+/// prior state *because* of that failure also failed — so beyond the
+/// original problem, whatever was being rolled back (e.g.
+/// `PlaybackEnginePort`'s navigation state — see
+/// `core/usecases/play_track.dart`) may no longer match what it was
+/// before the attempt. Distinct from a plain failure so a caller can tell
+/// "the operation didn't happen" apart from "the operation didn't happen
+/// AND the attempted cleanup didn't either."
+class EngineInconsistentFailure extends Failure {
+  final Failure cause;
+  final Failure rollbackFailure;
+
+  EngineInconsistentFailure(this.cause, this.rollbackFailure)
+      : super(
+          '${cause.message}; additionally, rolling back failed: '
+          '${rollbackFailure.message}',
+        );
+}

@@ -6,6 +6,8 @@ import '../core/domain/local_library_port.dart';
 import '../core/domain/media_source_port.dart';
 import '../core/domain/playback_engine_port.dart';
 import '../core/domain/playlist.dart';
+import '../core/domain/settings.dart';
+import '../core/domain/settings_port.dart';
 import '../core/domain/track.dart';
 import '../core/domain/user_profile.dart';
 import '../core/error/result.dart';
@@ -18,18 +20,28 @@ import '../core/usecases/listening_session.dart';
 import '../core/usecases/pause_track.dart';
 import '../core/usecases/play_track.dart';
 import '../core/usecases/remove_download.dart';
+import '../core/usecases/resume_track.dart';
 import '../core/usecases/save_playlist.dart';
 import '../core/usecases/search_catalog.dart';
 import '../core/usecases/seek_by.dart';
+import '../core/usecases/set_connected_server.dart';
+import '../core/usecases/set_download_quality.dart';
+import '../core/usecases/set_streaming_quality.dart';
 import '../core/usecases/skip_next.dart';
 import '../core/usecases/skip_previous.dart';
+import '../core/usecases/toggle_gapless_playback.dart';
 import '../core/usecases/toggle_immersive.dart';
+import '../core/usecases/toggle_repeat_mode.dart';
+import '../core/usecases/toggle_shuffle.dart';
+import '../core/usecases/toggle_wifi_only_downloads.dart';
 import '../core/usecases/update_profile.dart';
 import '../data/fakes/fake_download_port.dart';
 import '../data/fakes/fake_export_import_port.dart';
 import '../data/fakes/fake_local_library_port.dart';
 import '../data/fakes/fake_media_source_port.dart';
 import '../data/fakes/fake_playback_engine_port.dart';
+import '../data/fakes/fake_settings_port.dart';
+import '../features/settings/settings_state.dart';
 
 // Top-level provider wiring / composition root (docs/architecture.md
 // §3.4). Screens call use cases through these providers — never
@@ -61,6 +73,10 @@ final exportImportProvider = Provider<ExportImportPort>(
   (ref) => FakeExportImportPort(),
 );
 
+final settingsPortProvider = Provider<SettingsPort>(
+  (ref) => FakeSettingsPort(),
+);
+
 /// Shared between PlayTrack, PauseTrack, SkipNext, and SkipPrevious so
 /// they agree on what's currently being timed (see
 /// core/usecases/listening_session.dart).
@@ -81,6 +97,13 @@ final pauseTrackProvider = Provider<PauseTrack>(
   (ref) => PauseTrack(
     ref.watch(playbackEngineProvider),
     ref.watch(localLibraryProvider),
+    ref.watch(listeningSessionProvider),
+  ),
+);
+
+final resumeTrackProvider = Provider<ResumeTrack>(
+  (ref) => ResumeTrack(
+    ref.watch(playbackEngineProvider),
     ref.watch(listeningSessionProvider),
   ),
 );
@@ -118,6 +141,43 @@ final buildQueueProvider = Provider<BuildQueue>(
 
 final toggleImmersiveProvider = Provider<ToggleImmersive>(
   (ref) => const ToggleImmersive(),
+);
+
+final toggleShuffleProvider = Provider<ToggleShuffle>(
+  (ref) => ToggleShuffle(ref.watch(playbackEngineProvider)),
+);
+
+final toggleRepeatModeProvider = Provider<ToggleRepeatMode>(
+  (ref) => ToggleRepeatMode(ref.watch(playbackEngineProvider)),
+);
+
+final setStreamingQualityProvider = Provider<SetStreamingQuality>(
+  (ref) => SetStreamingQuality(ref.watch(settingsPortProvider)),
+);
+
+final toggleGaplessPlaybackProvider = Provider<ToggleGaplessPlayback>(
+  (ref) => ToggleGaplessPlayback(ref.watch(settingsPortProvider)),
+);
+
+final setDownloadQualityProvider = Provider<SetDownloadQuality>(
+  (ref) => SetDownloadQuality(ref.watch(settingsPortProvider)),
+);
+
+final toggleWifiOnlyDownloadsProvider = Provider<ToggleWifiOnlyDownloads>(
+  (ref) => ToggleWifiOnlyDownloads(ref.watch(settingsPortProvider)),
+);
+
+final setConnectedServerProvider = Provider<SetConnectedServer>(
+  (ref) => SetConnectedServer(ref.watch(settingsPortProvider)),
+);
+
+/// The Settings screen's presentation-layer Notifier (see
+/// features/settings/settings_state.dart) — declared here, not alongside
+/// the `SettingsController` class, since provider construction belongs in
+/// the composition root (docs/architecture.md §4).
+final settingsControllerProvider =
+    NotifierProvider<SettingsController, Settings>(
+  SettingsController.new,
 );
 
 final downloadTrackProvider = Provider<DownloadTrack>(

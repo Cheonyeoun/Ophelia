@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'playback_controller.dart';
+import '../features/playback_ui/playback_controller.dart';
 import 'theme.dart';
 
 /// The mini-player's actual rendered height, kept up to date by

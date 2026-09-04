@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/layout_metrics.dart';
-import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/screen_top_bar.dart';
 import '../../app/widgets/track_row.dart';
 import '../../core/domain/track.dart';
+import '../playback_ui/playback_controller.dart';
 
 /// Downloads — pushed from Library/Settings, no nav bar, mini-player
 /// still shown. Matches the "Downloads" frame in
@@ -39,7 +39,8 @@ class DownloadsScreen extends ConsumerWidget {
             : ListView(
                 padding: EdgeInsets.only(bottom: bottomInset),
                 children: [
-                  for (final track in tracks) _DownloadRow(track: track, queue: tracks),
+                  for (final (index, track) in tracks.indexed)
+                    _DownloadRow(track: track, queue: tracks, queueIndex: index),
                 ],
               ),
         error: (error, stack) => const SizedBox.shrink(),
@@ -52,16 +53,22 @@ class DownloadsScreen extends ConsumerWidget {
 class _DownloadRow extends ConsumerWidget {
   final Track track;
   final List<Track> queue;
+  final int queueIndex;
 
-  const _DownloadRow({required this.track, required this.queue});
+  const _DownloadRow({
+    required this.track,
+    required this.queue,
+    required this.queueIndex,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return TrackRow(
       title: track.title,
       subtitle: track.artist,
-      onTap: () =>
-          ref.read(playbackControllerProvider.notifier).play(track, queue: queue),
+      onTap: () => ref
+          .read(playbackControllerProvider.notifier)
+          .play(track, queue: queue, queueIndex: queueIndex),
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline, size: 18),
         color: AppColors.mist,

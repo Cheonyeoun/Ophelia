@@ -63,13 +63,15 @@ A production-grade Flutter music player. This document is the single source of t
 - `ListeningEvent` (trackId, playedAt, msPlayed) — raw data behind "top 5 this week"
 - `PlaybackState` (currentTrack, position, queue, isImmersive, repeatMode, shuffle)
 - `DownloadRecord` (trackId, localPath, sizeBytes, downloadedAt)
+- `Settings` (streamingQuality, gaplessPlayback, downloadQuality, wifiOnlyDownloads, connectedServer)
 
 **Ports** (abstract interfaces, defined here, implemented in infrastructure):
 - `MediaSourcePort`: `search(query)`, `getStreamUrl(trackId)`, `getTrackMetadata(trackId)`, `getCoverArt(trackId)`
 - `LocalLibraryPort`: CRUD for playlists, profile, listening events
 - `DownloadPort`: `download(track)`, `deleteDownload(trackId)`, `isDownloaded(trackId)`
-- `PlaybackEnginePort`: `play(track, sourcePath)`, `pause()`, `seek(duration)`, `skipNext()`, `skipPrevious()`, `setQueue(tracks)`
+- `PlaybackEnginePort`: `play(track, sourcePath, {queueIndex})`, `resume()`, `pause()`, `seek(duration)`, `skipNext()`, `skipPrevious()`, `setQueue(tracks)`, `setShuffle(enabled)`, `setRepeatMode(mode)`, `captureNavigationState()`, `restoreNavigationState(snapshot)`
 - `ExportImportPort`: `exportBundle() -> File`, `importBundle(File)`
+- `SettingsPort`: `getSettings()`, `saveSettings(settings)`
 
 **Why ports live in the domain, not infrastructure:** the domain decides what it needs. Infrastructure adapts to the domain's contract — never the other way around. This is the "dependency inversion" in SOLID, made concrete.
 
@@ -98,7 +100,7 @@ class PlayTrack {
 
 **Learning note:** this is where "download-first, stream-fallback" logic lives — once, in one place — instead of scattered across UI code. Every screen that plays a track calls this same use case and gets the same guarantees.
 
-Key use cases: `PlayTrack`, `PauseTrack`, `SeekBy`, `SkipNext/Previous`, `SearchCatalog`, `BuildQueue`, `ToggleImmersive`, `DownloadTrack`, `RemoveDownload`, `ComputeTopSongs(window: 7d)`, `ExportLibrary`, `ImportLibrary`, `SavePlaylist`, `UpdateProfile`.
+Key use cases: `PlayTrack`, `PauseTrack`, `ResumeTrack`, `SeekBy`, `SkipNext/Previous`, `SearchCatalog`, `BuildQueue`, `ToggleImmersive`, `ToggleShuffle`, `ToggleRepeatMode`, `DownloadTrack`, `RemoveDownload`, `ComputeTopSongs(window: 7d)`, `ExportLibrary`, `ImportLibrary`, `SavePlaylist`, `UpdateProfile`, `SetStreamingQuality`, `ToggleGaplessPlayback`, `SetDownloadQuality`, `ToggleWifiOnlyDownloads`, `SetConnectedServer`.
 
 ### 3.3 Infrastructure layer (adapters — the only place packages are imported)
 
@@ -109,6 +111,7 @@ Key use cases: `PlayTrack`, `PauseTrack`, `SeekBy`, `SkipNext/Previous`, `Search
 | `DownloadPort` | `DiskDownloadAdapter` | `dio`, `path_provider` |
 | `PlaybackEnginePort` | `JustAudioPlaybackAdapter` | `just_audio`, `audio_service` |
 | `ExportImportPort` | `FileExportAdapter` | `path_provider`, `share_plus` |
+| `SettingsPort` | TBD — likely the same Drift DB as `LocalLibraryPort`, or `shared_preferences` | `drift` or `shared_preferences` |
 
 Each adapter is the *only* place that knows about its underlying package. If `just_audio` is ever abandoned, you write `NewEnginePlaybackAdapter` implementing the same `PlaybackEnginePort` — nothing else in the app changes.
 

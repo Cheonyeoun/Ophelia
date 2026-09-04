@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/layout_metrics.dart';
-import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/screen_top_bar.dart';
 import '../../app/widgets/segmented_tabs.dart';
 import '../../app/widgets/track_row.dart';
+import '../playback_ui/playback_controller.dart';
 import '../../core/domain/track.dart';
 import '../../core/error/result.dart';
 
@@ -100,13 +100,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 : ListView(
                     padding: EdgeInsets.only(bottom: bottomInset),
                     children: [
-                      for (final track in _results)
+                      for (final (index, track) in _results.indexed)
                         TrackRow(
                           title: track.title,
                           subtitle: '${track.artist} · song',
                           onTap: () => ref
                               .read(playbackControllerProvider.notifier)
-                              .play(track, queue: _results),
+                              .play(track, queue: _results, queueIndex: index),
                         ),
                     ],
                   ),

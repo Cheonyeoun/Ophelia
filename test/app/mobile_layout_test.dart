@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ophelia/app/playback_controller.dart';
 import 'package:ophelia/app/router.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
+import 'package:ophelia/features/playback_ui/playback_controller.dart';
 import 'package:ophelia/main.dart';
 
 /// The rest of this test suite runs at flutter_test's default (desktop-

@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/layout_metrics.dart';
-import '../../app/playback_controller.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/section_label.dart';
 import '../../app/widgets/track_row.dart';
+import '../playback_ui/playback_controller.dart';
 
 /// The Home root tab — matches the "Home" frame in
 /// docs/design/ophelia-ui-mockup.html.
@@ -96,13 +96,13 @@ class HomeScreen extends ConsumerWidget {
           tracks.when(
             data: (data) => Column(
               children: [
-                for (final track in data.take(5))
+                for (final (index, track) in data.take(5).indexed)
                   TrackRow(
                     title: track.title,
                     subtitle: track.artist,
                     onTap: () => ref
                         .read(playbackControllerProvider.notifier)
-                        .play(track, queue: data),
+                        .play(track, queue: data, queueIndex: index),
                   ),
               ],
             ),
