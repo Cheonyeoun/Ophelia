@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/artist/artist_screen.dart';
 import '../features/downloads/downloads_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/library/library_screen.dart';
 import '../features/playback_ui/everyday_play_screen.dart';
 import '../features/playback_ui/immersive_play_screen.dart';
+import '../features/playback_ui/queue_screen.dart';
+import '../features/playlist/playlist_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/playback_ui/playback_controller.dart';
@@ -86,6 +89,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
           ),
+          GoRoute(
+            path: '/artist/:name',
+            builder: (context, state) => ArtistScreen(
+              artistName: Uri.decodeComponent(state.pathParameters['name']!),
+            ),
+          ),
+          GoRoute(
+            path: '/playlist/:id',
+            builder: (context, state) => PlaylistScreen(
+              playlistId: state.pathParameters['id']!,
+            ),
+          ),
         ],
       ),
       GoRoute(
@@ -95,6 +110,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/immersive-play',
         builder: (context, state) => const ImmersivePlayScreen(),
+      ),
+      // Reached only from Everyday Play (which is itself outside the
+      // outer ShellRoute, so it has no mini-player either) — nested
+      // alongside it rather than inside the ShellRoute above. Pushing
+      // from a route outside that shell into one of its nested routes
+      // trips a Navigator duplicate-page-key assertion; a sibling
+      // top-level route avoids crossing between the two Navigators.
+      GoRoute(
+        path: '/queue',
+        builder: (context, state) => const QueueScreen(),
       ),
     ],
   );

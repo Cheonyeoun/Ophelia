@@ -66,7 +66,7 @@ A production-grade Flutter music player. This document is the single source of t
 - `Settings` (streamingQuality, gaplessPlayback, downloadQuality, wifiOnlyDownloads, connectedServer)
 
 **Ports** (abstract interfaces, defined here, implemented in infrastructure):
-- `MediaSourcePort`: `search(query)`, `getStreamUrl(trackId)`, `getTrackMetadata(trackId)`, `getCoverArt(trackId)`
+- `MediaSourcePort`: `search(query)`, `getTracksByArtist(artistName)`, `getStreamUrl(trackId)`, `getTrackMetadata(trackId)`, `getCoverArt(trackId)`
 - `LocalLibraryPort`: CRUD for playlists, profile, listening events
 - `DownloadPort`: `download(track)`, `deleteDownload(trackId)`, `isDownloaded(trackId)`
 - `PlaybackEnginePort`: `play(track, sourcePath, {queueIndex})`, `resume()`, `pause()`, `seek(duration)`, `skipNext()`, `skipPrevious()`, `setQueue(tracks)`, `setShuffle(enabled)`, `setRepeatMode(mode)`, `captureNavigationState()`, `restoreNavigationState(snapshot)`
@@ -100,7 +100,7 @@ class PlayTrack {
 
 **Learning note:** this is where "download-first, stream-fallback" logic lives — once, in one place — instead of scattered across UI code. Every screen that plays a track calls this same use case and gets the same guarantees.
 
-Key use cases: `PlayTrack`, `PauseTrack`, `ResumeTrack`, `SeekBy`, `SkipNext/Previous`, `SearchCatalog`, `BuildQueue`, `ToggleImmersive`, `ToggleShuffle`, `ToggleRepeatMode`, `DownloadTrack`, `RemoveDownload`, `ComputeTopSongs(window: 7d)`, `ExportLibrary`, `ImportLibrary`, `SavePlaylist`, `UpdateProfile`, `SetStreamingQuality`, `ToggleGaplessPlayback`, `SetDownloadQuality`, `ToggleWifiOnlyDownloads`, `SetConnectedServer`.
+Key use cases: `PlayTrack`, `PauseTrack`, `ResumeTrack`, `SeekBy`, `SkipNext/Previous`, `SearchCatalog`, `GetArtistTracks`, `GetPlaylistTracks`, `BuildQueue`, `ToggleImmersive`, `ToggleShuffle`, `ToggleRepeatMode`, `DownloadTrack`, `RemoveDownload`, `ComputeTopSongs(window: 7d)`, `ExportLibrary`, `ImportLibrary`, `SavePlaylist`, `UpdateProfile`, `SetStreamingQuality`, `ToggleGaplessPlayback`, `SetDownloadQuality`, `ToggleWifiOnlyDownloads`, `SetConnectedServer`.
 
 ### 3.3 Infrastructure layer (adapters — the only place packages are imported)
 
@@ -150,8 +150,10 @@ lib/
   features/
     home/
     library/
+    artist/           # artist detail screen
+    playlist/         # playlist detail screen
     profile/
-    playback_ui/      # immersive + everyday play screens
+    playback_ui/      # immersive + everyday play screens, the queue screen
     settings/
     search/
   app/
@@ -220,12 +222,15 @@ The bottom nav bar and the mini-player are two separate, independently-scoped pi
 | Settings (root tab) | Yes | Yes |
 | Search (pushed from Home) | No — full screen, back arrow | Yes |
 | Downloads (pushed from Library/Settings) | No — full screen, back arrow | Yes |
+| Artist detail (pushed from an artist anywhere) | No — full screen, back arrow | Yes |
+| Playlist detail (pushed from Library/Home) | No — full screen, back arrow | Yes |
+| Queue (pushed from Everyday Play) | No — full screen, back arrow | No (see below) |
 | Everyday play | No | — (this screen is the player) |
 | Immersive play | No | — (this screen is the player) |
 
 Rules:
 - **Nav bar scope:** only the three root tabs (Home, Library, Settings) show the bottom nav bar. Any screen reached by pushing (Search, Downloads, playlist/artist detail, etc.) is a full-screen push with a back arrow — standard mobile pattern, and it keeps the tab bar meaningfully tied to top-level destinations only.
-- **Mini-player scope:** shown on every screen except the two screens that are themselves the player (Everyday Play, Immersive Play). It hides entirely when nothing is loaded, rather than rendering an empty/disabled bar.
+- **Mini-player scope:** shown on every screen except the two screens that are themselves the player (Everyday Play, Immersive Play) — and Queue, which is nested alongside them as a route outside the outer shell rather than inside it, since it's only ever reached by pushing from Everyday Play (itself already outside that shell); crossing from a route outside the shell into one nested inside it trips a Navigator duplicate-page-key assertion. The mini-player hides entirely when nothing is loaded, rather than rendering an empty/disabled bar.
 - **Persistence:** the mini-player is one persistent widget instance across navigation — it must not remount or flicker when moving between Home → Library → a pushed detail screen.
 - **Entry point:** tapping the mini-player navigates to Everyday Play (slide up from bottom) — the only interaction that transitions into the two player-only screens from elsewhere in the app.
 

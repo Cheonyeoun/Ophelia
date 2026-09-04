@@ -9,6 +9,10 @@ import 'track.dart';
 abstract interface class MediaSourcePort {
   Future<Result<List<Track>, Failure>> search(String query);
 
+  /// Every track credited to [artistName] — an exact match against
+  /// [Track.artist], not the fuzzy substring matching [search] does.
+  Future<Result<List<Track>, Failure>> getTracksByArtist(String artistName);
+
   Future<Result<String, Failure>> getStreamUrl(String trackId);
 
   Future<Result<Track, Failure>> getTrackMetadata(String trackId);

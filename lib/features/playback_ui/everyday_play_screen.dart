@@ -192,7 +192,14 @@ class EverydayPlayScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 38),
-                            const Icon(Icons.queue_music, size: 16, color: AppColors.mist),
+                            GestureDetector(
+                              onTap: () => context.push('/queue'),
+                              child: const Icon(
+                                Icons.queue_music,
+                                size: 16,
+                                color: AppColors.mist,
+                              ),
+                            ),
                           ],
                         ),
                       ),

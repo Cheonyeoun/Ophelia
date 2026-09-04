@@ -15,6 +15,8 @@ import '../core/usecases/build_queue.dart';
 import '../core/usecases/compute_top_songs.dart';
 import '../core/usecases/download_track.dart';
 import '../core/usecases/export_library.dart';
+import '../core/usecases/get_artist_tracks.dart';
+import '../core/usecases/get_playlist_tracks.dart';
 import '../core/usecases/import_library.dart';
 import '../core/usecases/listening_session.dart';
 import '../core/usecases/pause_track.dart';
@@ -139,6 +141,14 @@ final buildQueueProvider = Provider<BuildQueue>(
   ),
 );
 
+final getArtistTracksProvider = Provider<GetArtistTracks>(
+  (ref) => GetArtistTracks(ref.watch(mediaSourceProvider)),
+);
+
+final getPlaylistTracksProvider = Provider<GetPlaylistTracks>(
+  (ref) => GetPlaylistTracks(ref.watch(mediaSourceProvider)),
+);
+
 final toggleImmersiveProvider = Provider<ToggleImmersive>(
   (ref) => const ToggleImmersive(),
 );
@@ -228,6 +238,47 @@ final playlistsProvider = FutureProvider<List<Playlist>>((ref) async {
   final result = await ref.watch(localLibraryProvider).getPlaylists();
   return switch (result) {
     Success(value: final playlists) => playlists,
+    ResultFailure() => const [],
+  };
+});
+
+/// A single playlist by id, for the playlist detail screen — `null` if
+/// no such playlist exists, mirroring [userProfileProvider]'s pattern for
+/// a lookup that might not find anything.
+final playlistProvider = FutureProvider.family<Playlist?, String>((
+  ref,
+  id,
+) async {
+  final result = await ref.watch(localLibraryProvider).getPlaylist(id);
+  return switch (result) {
+    Success(value: final playlist) => playlist,
+    ResultFailure() => null,
+  };
+});
+
+/// [id]'s playlist, resolved to full tracks in order, for the playlist
+/// detail screen to display and play from.
+final playlistTracksProvider = FutureProvider.family<List<Track>, String>((
+  ref,
+  id,
+) async {
+  final playlist = await ref.watch(playlistProvider(id).future);
+  if (playlist == null) return const [];
+  final result = await ref.watch(getPlaylistTracksProvider)(playlist);
+  return switch (result) {
+    Success(value: final tracks) => tracks,
+    ResultFailure() => const [],
+  };
+});
+
+/// Every track credited to [artistName], for the artist detail screen.
+final artistTracksProvider = FutureProvider.family<List<Track>, String>((
+  ref,
+  artistName,
+) async {
+  final result = await ref.watch(getArtistTracksProvider)(artistName);
+  return switch (result) {
+    Success(value: final tracks) => tracks,
     ResultFailure() => const [],
   };
 });

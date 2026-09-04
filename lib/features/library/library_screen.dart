@@ -89,17 +89,16 @@ class _PlaylistsGrid extends ConsumerWidget {
   }
 }
 
-class _PlaylistCard extends ConsumerWidget {
+class _PlaylistCard extends StatelessWidget {
   final Playlist playlist;
 
   const _PlaylistCard({required this.playlist});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () =>
-          ref.read(playbackControllerProvider.notifier).playPlaylist(playlist),
+      onTap: () => context.push('/playlist/${playlist.id}'),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -154,6 +153,11 @@ class _TrackDerivedList extends ConsumerWidget {
               TrackRow(
                 title: value,
                 subtitle: field == _TrackField.artist ? 'artist' : 'album',
+                onTap: field == _TrackField.artist
+                    ? () => context.push(
+                          '/artist/${Uri.encodeComponent(value)}',
+                        )
+                    : null,
               ),
           ],
         );
