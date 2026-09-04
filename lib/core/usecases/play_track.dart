@@ -13,9 +13,18 @@ import 'listening_session.dart';
 /// When [queue] is given, it becomes the engine's active queue — e.g. the
 /// track list the caller played this track from — so skipNext/
 /// skipPrevious (and shuffle/repeat) have somewhere to operate; otherwise
-/// the queue is just [track] on its own. The engine resolves [track]'s
-/// position within that queue itself (see
-/// data/fakes/fake_playback_engine_port.dart's `play`).
+/// the queue is just [track] on its own. [queueIndex] is [track]'s
+/// position within that queue, passed straight through to
+/// `PlaybackEnginePort.play` (see playback_engine_port.dart for why this
+/// is explicit rather than searched for).
+///
+/// The queue isn't committed to the engine until the source has resolved
+/// — a failure before then (e.g. the track isn't downloaded and streaming
+/// fails) never touches the engine at all. Once the queue *is* committed,
+/// the engine needs it set before [PlaybackEnginePort.play] can position
+/// itself correctly, so a failure from `play` itself is repaired by
+/// restoring the engine's prior queue — a failed play must never leave
+/// the engine navigating a queue the UI never showed.
 ///
 /// This does not finalize any track that was already playing — only
 /// `PauseTrack`, `SkipNext`, and `SkipPrevious` do that (see
@@ -30,15 +39,11 @@ class PlayTrack {
 
   PlayTrack(this.playback, this.mediaSource, this.downloads, this.session);
 
-  Future<Result<void, Failure>> call(Track track, {List<Track>? queue}) async {
-    final setQueueResult = await playback.setQueue(queue ?? [track]);
-    switch (setQueueResult) {
-      case Success():
-        break;
-      case ResultFailure(failure: final f):
-        return Result.failure(f);
-    }
-
+  Future<Result<void, Failure>> call(
+    Track track, {
+    List<Track>? queue,
+    int queueIndex = 0,
+  }) async {
     final isDownloadedResult = await downloads.isDownloaded(track.id);
     final bool isDownloaded;
     switch (isDownloadedResult) {
@@ -59,11 +64,25 @@ class PlayTrack {
         return Result.failure(f);
     }
 
-    final playResult = await playback.play(track, source);
+    final priorQueue = playback.queue;
+    final setQueueResult = await playback.setQueue(queue ?? [track]);
+    switch (setQueueResult) {
+      case Success():
+        break;
+      case ResultFailure(failure: final f):
+        return Result.failure(f);
+    }
+
+    final playResult = await playback.play(
+      track,
+      source,
+      queueIndex: queueIndex,
+    );
     switch (playResult) {
       case Success():
         break;
       case ResultFailure(failure: final f):
+        await playback.setQueue(priorQueue);
         return Result.failure(f);
     }
 

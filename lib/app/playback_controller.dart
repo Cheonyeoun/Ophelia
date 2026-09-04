@@ -4,6 +4,7 @@ import '../core/domain/playback_state.dart';
 import '../core/domain/playlist.dart';
 import '../core/domain/track.dart';
 import '../core/error/result.dart';
+import '../core/usecases/toggle_repeat_mode.dart';
 import 'providers.dart';
 
 /// Presentation-layer view of playback: the domain [PlaybackState] plus
@@ -52,12 +53,21 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// Plays [track]. When [queue] is given, it becomes the active queue —
   /// e.g. the track list a screen played this track from — so
   /// skipNext/skipPrevious have somewhere to go; otherwise the queue is
-  /// just [track] on its own.
-  Future<void> play(Track track, {List<Track>? queue}) async {
+  /// just [track] on its own. [queueIndex] is [track]'s position within
+  /// that queue — the caller (e.g. the screen that built the list [track]
+  /// came from) is the one place that unambiguously knows this, so it's
+  /// passed through rather than re-derived by searching the queue for a
+  /// value-equal track (see core/domain/playback_engine_port.dart).
+  Future<void> play(
+    Track track, {
+    List<Track>? queue,
+    int queueIndex = 0,
+  }) async {
     final effectiveQueue = queue ?? [track];
     final result = await ref.read(playTrackProvider)(
       track,
       queue: effectiveQueue,
+      queueIndex: queueIndex,
     );
     if (result case ResultFailure()) return;
 
@@ -89,11 +99,23 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     state = state.copyWith(isPlaying: false);
   }
 
+  /// Resumes the already-loaded current track via `ResumeTrack` — unlike
+  /// [play], this never re-commits the queue, so it can't reset shuffle
+  /// history the way re-entering [play] on resume used to (see
+  /// core/usecases/resume_track.dart).
+  Future<void> resume() async {
+    final track = state.playback.currentTrack;
+    if (track == null) return;
+    final result = await ref.read(resumeTrackProvider)(track);
+    if (result case ResultFailure()) return;
+    state = state.copyWith(isPlaying: true);
+  }
+
   Future<void> togglePlayPause() async {
     if (state.isPlaying) {
       await pause();
     } else if (state.playback.currentTrack != null) {
-      await play(state.playback.currentTrack!, queue: state.playback.queue);
+      await resume();
     }
   }
 
@@ -150,23 +172,34 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     );
   }
 
+  /// Toggles shuffle. The target value is computed synchronously, from
+  /// [state] as it is right now, *before* the `await` below — and applied
+  /// to [state] immediately — rather than read again once the engine call
+  /// resolves. Otherwise two rapid taps both read the same pre-toggle
+  /// [state] (the first tap's own update hasn't landed yet while its
+  /// `await` is in flight) and compute the same target, instead of each
+  /// toggling from the other's result.
   Future<void> toggleShuffle() async {
-    final result = await ref.read(toggleShuffleProvider)(state.playback);
-    switch (result) {
-      case Success(value: final updated):
-        state = state.copyWith(playback: updated);
-      case ResultFailure():
-        return;
+    final previous = state.playback;
+    final target = !previous.shuffle;
+    state = state.copyWith(playback: previous.copyWith(shuffle: target));
+
+    final result = await ref.read(toggleShuffleProvider)(previous);
+    if (result case ResultFailure()) {
+      state = state.copyWith(playback: previous);
     }
   }
 
+  /// The repeat-mode equivalent of [toggleShuffle] — see its doc comment
+  /// for why the target is computed synchronously up front.
   Future<void> toggleRepeatMode() async {
-    final result = await ref.read(toggleRepeatModeProvider)(state.playback);
-    switch (result) {
-      case Success(value: final updated):
-        state = state.copyWith(playback: updated);
-      case ResultFailure():
-        return;
+    final previous = state.playback;
+    final target = ToggleRepeatMode.next(previous.repeatMode);
+    state = state.copyWith(playback: previous.copyWith(repeatMode: target));
+
+    final result = await ref.read(toggleRepeatModeProvider)(previous);
+    if (result case ResultFailure()) {
+      state = state.copyWith(playback: previous);
     }
   }
 }

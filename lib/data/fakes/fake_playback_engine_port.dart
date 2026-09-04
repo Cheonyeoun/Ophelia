@@ -16,6 +16,7 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   Track? currentTrack;
   String? currentSourcePath;
   Duration position = Duration.zero;
+  @override
   List<Track> queue = const [];
   bool isPlaying = false;
   bool shuffle = false;
@@ -37,16 +38,25 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   FakePlaybackEnginePort({Random? random}) : _random = random ?? Random();
 
   @override
-  Future<Result<void, Failure>> play(Track track, String sourcePath) async {
+  Future<Result<void, Failure>> play(
+    Track track,
+    String sourcePath, {
+    int queueIndex = 0,
+  }) async {
     currentTrack = track;
     currentSourcePath = sourcePath;
     position = Duration.zero;
     isPlaying = true;
-    final index = queue.indexOf(track);
-    if (index != -1) currentIndex = index;
+    currentIndex = queueIndex;
     _shuffleHistory
       ..clear()
       ..add(currentIndex);
+    return const Result.success(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> resume() async {
+    isPlaying = true;
     return const Result.success(null);
   }
 

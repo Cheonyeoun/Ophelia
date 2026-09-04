@@ -68,7 +68,7 @@ A production-grade Flutter music player. This document is the single source of t
 - `MediaSourcePort`: `search(query)`, `getStreamUrl(trackId)`, `getTrackMetadata(trackId)`, `getCoverArt(trackId)`
 - `LocalLibraryPort`: CRUD for playlists, profile, listening events
 - `DownloadPort`: `download(track)`, `deleteDownload(trackId)`, `isDownloaded(trackId)`
-- `PlaybackEnginePort`: `play(track, sourcePath)`, `pause()`, `seek(duration)`, `skipNext()`, `skipPrevious()`, `setQueue(tracks)`, `setShuffle(enabled)`, `setRepeatMode(mode)`
+- `PlaybackEnginePort`: `play(track, sourcePath, {queueIndex})`, `resume()`, `pause()`, `seek(duration)`, `skipNext()`, `skipPrevious()`, `setQueue(tracks)`, `setShuffle(enabled)`, `setRepeatMode(mode)`, `queue` (getter)
 - `ExportImportPort`: `exportBundle() -> File`, `importBundle(File)`
 
 **Why ports live in the domain, not infrastructure:** the domain decides what it needs. Infrastructure adapts to the domain's contract — never the other way around. This is the "dependency inversion" in SOLID, made concrete.
@@ -283,5 +283,6 @@ Background playback (notification controls, lock screen, headphone buttons) is a
 1. **Which media API** for the catalog — this determines the exact `MediaSourcePort` method signatures (does it return direct stream URLs, or require a signed-request flow?).
 2. **Drift vs. Isar** for the local DB — recommendation is Drift, given relational data (playlists ↔ tracks) and the need for reliable export/import as portable SQLite files.
 3. **How "download for offline" limits work** — storage cap? user-configurable?
+4. **`SettingsController` (lib/features/settings/settings_state.dart)** bundles all Settings-screen actions in one presentation-layer `Notifier` instead of one use case per action, since there's no `SettingsPort`/adapter yet — revisit and split into use cases once real settings persistence is built.
 
 Once these are settled, next step is UI/UX design applied on top of this architecture — translating your wireframes into a proper design system (typography, spacing, motion, the glassmorphic profile treatment) before any widget code is written.

@@ -1,6 +1,9 @@
 import 'package:test/test.dart';
+import 'package:ophelia/core/domain/playback_engine_port.dart';
+import 'package:ophelia/core/domain/playback_state.dart';
 import 'package:ophelia/core/domain/track.dart';
 import 'package:ophelia/core/error/failure.dart';
+import 'package:ophelia/core/error/result.dart';
 import 'package:ophelia/core/usecases/listening_session.dart';
 import 'package:ophelia/core/usecases/play_track.dart';
 import 'package:ophelia/data/fakes/fake_download_port.dart';
@@ -9,6 +12,56 @@ import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
 
 import '../../support/result_test_helpers.dart';
+
+/// Wraps a [FakePlaybackEnginePort], but always fails [play] — lets a test
+/// exercise `PlayTrack`'s rollback path (restoring the engine's prior
+/// queue when `play` fails after `setQueue` already succeeded) without
+/// needing a real engine that can actually fail to play something.
+class _PlayFailingEngine implements PlaybackEnginePort {
+  final FakePlaybackEnginePort inner;
+
+  _PlayFailingEngine(this.inner);
+
+  @override
+  Future<Result<void, Failure>> play(
+    Track track,
+    String sourcePath, {
+    int queueIndex = 0,
+  }) async {
+    return Result.failure(const StorageFailure('engine rejected play'));
+  }
+
+  @override
+  Future<Result<void, Failure>> resume() => inner.resume();
+
+  @override
+  Future<Result<void, Failure>> pause() => inner.pause();
+
+  @override
+  Future<Result<void, Failure>> seek(Duration position) =>
+      inner.seek(position);
+
+  @override
+  Future<Result<Track, Failure>> skipNext() => inner.skipNext();
+
+  @override
+  Future<Result<Track, Failure>> skipPrevious() => inner.skipPrevious();
+
+  @override
+  Future<Result<void, Failure>> setQueue(List<Track> tracks) =>
+      inner.setQueue(tracks);
+
+  @override
+  Future<Result<void, Failure>> setShuffle(bool enabled) =>
+      inner.setShuffle(enabled);
+
+  @override
+  Future<Result<void, Failure>> setRepeatMode(RepeatMode repeatMode) =>
+      inner.setRepeatMode(repeatMode);
+
+  @override
+  List<Track> get queue => inner.queue;
+}
 
 void main() {
   late FakePlaybackEnginePort playback;
@@ -48,12 +101,14 @@ void main() {
   });
 
   test(
-    'sets the engine queue to the given queue, positioned at the played '
-    'track',
+    'sets the engine queue to the given queue, positioned at the given '
+    'queueIndex',
     () async {
       final queue = [sampleTracks[0], sampleTracks[1], sampleTracks[2]];
 
-      unwrapValue(await playTrack(sampleTracks[1], queue: queue));
+      unwrapValue(
+        await playTrack(sampleTracks[1], queue: queue, queueIndex: 1),
+      );
 
       expect(playback.queue, queue);
       expect(playback.currentIndex, 1);
@@ -81,6 +136,61 @@ void main() {
     expect(event, isNotNull);
     expect(event!.trackId, track.id);
   });
+
+  test(
+    'never commits a queue to the engine when the track cannot be sourced',
+    () async {
+      final failingSourceMediaSource = FakeMediaSourcePort(tracks: const []);
+      final playTrackWithFailingSource = PlayTrack(
+        playback,
+        failingSourceMediaSource,
+        downloads,
+        session,
+      );
+      final priorQueue = [sampleTracks[3], sampleTracks[4]];
+      await playback.setQueue(priorQueue);
+
+      final failure = unwrapFailure(
+        await playTrackWithFailingSource(
+          sampleTracks[0],
+          queue: [sampleTracks[0], sampleTracks[1]],
+        ),
+      );
+
+      expect(failure, isA<NotFoundFailure>());
+      expect(playback.queue, priorQueue);
+    },
+  );
+
+  test(
+    'restores the engine\'s prior queue when play itself fails after the '
+    'queue was already committed',
+    () async {
+      final failingEngine = _PlayFailingEngine(playback);
+      final playTrackWithFailingEngine = PlayTrack(
+        failingEngine,
+        mediaSource,
+        downloads,
+        session,
+      );
+      final priorQueue = [sampleTracks[3], sampleTracks[4]];
+      await playback.setQueue(priorQueue);
+
+      final failure = unwrapFailure(
+        await playTrackWithFailingEngine(
+          sampleTracks[0],
+          queue: [sampleTracks[0], sampleTracks[1]],
+        ),
+      );
+
+      expect(failure, isA<StorageFailure>());
+      // The engine briefly had the new queue committed (play() needs it
+      // set to position itself) but PlayTrack rolled it back once play
+      // failed, so the engine is left navigating the same queue the UI
+      // still shows -- not the one from the failed attempt.
+      expect(playback.queue, priorQueue);
+    },
+  );
 
   test(
     'propagates a failure when the track is unknown to the media source',

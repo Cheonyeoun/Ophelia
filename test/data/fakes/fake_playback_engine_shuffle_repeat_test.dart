@@ -25,7 +25,7 @@ void main() {
     test('RepeatMode.one keeps skipPrevious on the current track', () async {
       final playback = FakePlaybackEnginePort();
       await playback.setQueue(sampleTracks);
-      await playback.play(sampleTracks[2], 'src');
+      await playback.play(sampleTracks[2], 'src', queueIndex: 2);
       await playback.setRepeatMode(RepeatMode.one);
 
       final track = unwrapValue(await playback.skipPrevious());
@@ -40,7 +40,11 @@ void main() {
       () async {
         final playback = FakePlaybackEnginePort();
         await playback.setQueue(sampleTracks);
-        await playback.play(sampleTracks.last, 'src');
+        await playback.play(
+          sampleTracks.last,
+          'src',
+          queueIndex: sampleTracks.length - 1,
+        );
         await playback.setRepeatMode(RepeatMode.all);
 
         final track = unwrapValue(await playback.skipNext());
@@ -69,7 +73,11 @@ void main() {
     test('RepeatMode.off still fails at the end of the queue', () async {
       final playback = FakePlaybackEnginePort();
       await playback.setQueue(sampleTracks);
-      await playback.play(sampleTracks.last, 'src');
+      await playback.play(
+        sampleTracks.last,
+        'src',
+        queueIndex: sampleTracks.length - 1,
+      );
 
       final failure = unwrapFailure(await playback.skipNext());
 
@@ -148,6 +156,31 @@ void main() {
         final failure = unwrapFailure(await playback.skipPrevious());
 
         expect(failure, isA<NotFoundFailure>());
+      },
+    );
+  });
+
+  group('resume', () {
+    test(
+      'leaves the queue, position, and shuffle history untouched, unlike '
+      'play',
+      () async {
+        final playback = FakePlaybackEnginePort(random: Random(9));
+        await playback.setQueue(sampleTracks);
+        await playback.play(sampleTracks[0], 'src');
+        await playback.setShuffle(true);
+        final firstShufflePick = unwrapValue(await playback.skipNext());
+        await playback.pause();
+
+        unwrapValue(await playback.resume());
+
+        expect(playback.isPlaying, isTrue);
+        expect(playback.queue, sampleTracks);
+        expect(playback.currentTrack, firstShufflePick);
+        // If resume had reset shuffle history the way play() does,
+        // skipPrevious would fail here instead of undoing the pick above.
+        final back = unwrapValue(await playback.skipPrevious());
+        expect(back, sampleTracks[0]);
       },
     );
   });

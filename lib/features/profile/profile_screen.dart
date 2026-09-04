@@ -63,13 +63,13 @@ class ProfileScreen extends ConsumerWidget {
           topSongs.when(
             data: (data) => Column(
               children: [
-                for (final track in data)
+                for (final (index, track) in data.indexed)
                   TrackRow(
                     title: track.title,
                     subtitle: track.artist,
                     onTap: () => ref
                         .read(playbackControllerProvider.notifier)
-                        .play(track, queue: data),
+                        .play(track, queue: data, queueIndex: index),
                   ),
               ],
             ),

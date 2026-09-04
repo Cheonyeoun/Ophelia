@@ -9,7 +9,25 @@ import 'track.dart';
 /// depends on this interface.
 abstract interface class PlaybackEnginePort {
   /// Plays [track] from [sourcePath] — a stream URL or a local file path.
-  Future<Result<void, Failure>> play(Track track, String sourcePath);
+  ///
+  /// [queueIndex] is [track]'s position within whatever queue was just set
+  /// via [setQueue], passed explicitly by the caller (see
+  /// core/usecases/play_track.dart) rather than searched for by value —
+  /// a value-equality search can't disambiguate a track that appears more
+  /// than once in the queue, the same class of bug already fixed in
+  /// [skipNext]/[skipPrevious] by tracking position with an index instead
+  /// of matching on the track itself.
+  Future<Result<void, Failure>> play(
+    Track track,
+    String sourcePath, {
+    int queueIndex = 0,
+  });
+
+  /// Resumes whatever track is already loaded — e.g. after [pause] — at
+  /// its current position, without touching the queue or shuffle history
+  /// the way a fresh [play] call does. See
+  /// app/playback_controller.dart's `togglePlayPause`.
+  Future<Result<void, Failure>> resume();
 
   Future<Result<void, Failure>> pause();
 
@@ -32,4 +50,10 @@ abstract interface class PlaybackEnginePort {
   /// Sets what happens once [skipNext]/[skipPrevious] would otherwise run
   /// out of queue.
   Future<Result<void, Failure>> setRepeatMode(RepeatMode repeatMode);
+
+  /// The engine's current queue — read, not just written, so a caller
+  /// (e.g. `PlayTrack`) can capture it before committing a new one and
+  /// restore it if a later step fails, instead of leaving the engine
+  /// navigating a queue the UI never actually reflected.
+  List<Track> get queue;
 }

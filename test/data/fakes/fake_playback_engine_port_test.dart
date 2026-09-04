@@ -45,6 +45,33 @@ void main() {
   );
 
   test(
+    'positions currentIndex from the caller-supplied queueIndex, not a '
+    'value-equality search, when the played track appears more than once '
+    'in the queue',
+    () async {
+      final playback = FakePlaybackEnginePort();
+      final duplicateQueue = [
+        sampleTracks[0],
+        sampleTracks[1],
+        sampleTracks[0],
+      ];
+      await playback.setQueue(duplicateQueue);
+
+      // Play the second (later) occurrence explicitly. A value-equality
+      // search (queue.indexOf) would always find the first occurrence
+      // (index 0) instead, regardless of which one was actually played.
+      unwrapValue(
+        await playback.play(duplicateQueue[2], 'src', queueIndex: 2),
+      );
+      expect(playback.currentIndex, 2);
+
+      unwrapValue(await playback.skipPrevious());
+      expect(playback.currentIndex, 1);
+      expect(playback.currentTrack, duplicateQueue[1]);
+    },
+  );
+
+  test(
     'keeps currentSourcePath consistent with currentTrack after skipping '
     'forward',
     () async {

@@ -39,7 +39,8 @@ class DownloadsScreen extends ConsumerWidget {
             : ListView(
                 padding: EdgeInsets.only(bottom: bottomInset),
                 children: [
-                  for (final track in tracks) _DownloadRow(track: track, queue: tracks),
+                  for (final (index, track) in tracks.indexed)
+                    _DownloadRow(track: track, queue: tracks, queueIndex: index),
                 ],
               ),
         error: (error, stack) => const SizedBox.shrink(),
@@ -52,16 +53,22 @@ class DownloadsScreen extends ConsumerWidget {
 class _DownloadRow extends ConsumerWidget {
   final Track track;
   final List<Track> queue;
+  final int queueIndex;
 
-  const _DownloadRow({required this.track, required this.queue});
+  const _DownloadRow({
+    required this.track,
+    required this.queue,
+    required this.queueIndex,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return TrackRow(
       title: track.title,
       subtitle: track.artist,
-      onTap: () =>
-          ref.read(playbackControllerProvider.notifier).play(track, queue: queue),
+      onTap: () => ref
+          .read(playbackControllerProvider.notifier)
+          .play(track, queue: queue, queueIndex: queueIndex),
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline, size: 18),
         color: AppColors.mist,

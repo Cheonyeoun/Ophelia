@@ -18,6 +18,7 @@ import '../core/usecases/listening_session.dart';
 import '../core/usecases/pause_track.dart';
 import '../core/usecases/play_track.dart';
 import '../core/usecases/remove_download.dart';
+import '../core/usecases/resume_track.dart';
 import '../core/usecases/save_playlist.dart';
 import '../core/usecases/search_catalog.dart';
 import '../core/usecases/seek_by.dart';
@@ -83,6 +84,13 @@ final pauseTrackProvider = Provider<PauseTrack>(
   (ref) => PauseTrack(
     ref.watch(playbackEngineProvider),
     ref.watch(localLibraryProvider),
+    ref.watch(listeningSessionProvider),
+  ),
+);
+
+final resumeTrackProvider = Provider<ResumeTrack>(
+  (ref) => ResumeTrack(
+    ref.watch(playbackEngineProvider),
     ref.watch(listeningSessionProvider),
   ),
 );

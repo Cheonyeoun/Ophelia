@@ -53,6 +53,7 @@ class SettingsScreen extends ConsumerWidget {
             label: 'Gapless playback',
             toggleValue: settings.gaplessPlayback,
             onToggle: (_) => settingsController.toggleGaplessPlayback(),
+            onTap: settingsController.toggleGaplessPlayback,
           ),
           const _SectionLabel('Downloads'),
           _SettingRow(
@@ -66,6 +67,7 @@ class SettingsScreen extends ConsumerWidget {
             label: 'Wi-Fi only downloads',
             toggleValue: settings.wifiOnlyDownloads,
             onToggle: (_) => settingsController.toggleWifiOnlyDownloads(),
+            onTap: settingsController.toggleWifiOnlyDownloads,
           ),
           _SettingRow(
             icon: Icons.download_outlined,

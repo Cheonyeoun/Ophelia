@@ -5,6 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Real persistence is a future LocalLibraryPort/SettingsPort adapter;
 /// this is presentation-layer state standing in for it until then, not
 /// something reached through a use case.
+///
+/// **Deliberate, temporary exception to docs/architecture.md §3.4**
+/// ("screens call use cases through providers"): [SettingsController]
+/// bundles all five settings actions into one `Notifier` instead of one
+/// use-case-per-action, because there's no real `SettingsPort`/adapter
+/// yet for individual use cases to route to — a use case with nothing to
+/// call but "update in-memory UI state" doesn't earn its own class. This
+/// should be revisited and split into one use case per action once real
+/// settings persistence exists (tracked in docs/architecture.md §12).
 class SettingsState {
   final String streamingQuality;
   final bool gaplessPlayback;

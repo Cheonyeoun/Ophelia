@@ -12,13 +12,21 @@ class ToggleRepeatMode {
 
   static const _cycle = [RepeatMode.off, RepeatMode.all, RepeatMode.one];
 
+  /// The repeat mode [current] cycles to next. Pure and synchronous so a
+  /// caller (e.g. `PlaybackController`) can compute the target value
+  /// itself before firing off the async engine call, rather than deriving
+  /// it from state that may be stale by the time an earlier in-flight
+  /// toggle's `await` resolves — see app/playback_controller.dart's
+  /// `toggleRepeatMode`.
+  static RepeatMode next(RepeatMode current) =>
+      _cycle[(_cycle.indexOf(current) + 1) % _cycle.length];
+
   Future<Result<PlaybackState, Failure>> call(PlaybackState state) async {
-    final next =
-        _cycle[(_cycle.indexOf(state.repeatMode) + 1) % _cycle.length];
-    final result = await playback.setRepeatMode(next);
+    final target = next(state.repeatMode);
+    final result = await playback.setRepeatMode(target);
     switch (result) {
       case Success():
-        return Result.success(state.copyWith(repeatMode: next));
+        return Result.success(state.copyWith(repeatMode: target));
       case ResultFailure(failure: final f):
         return Result.failure(f);
     }

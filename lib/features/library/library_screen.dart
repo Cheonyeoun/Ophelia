@@ -175,13 +175,13 @@ class _SongsList extends ConsumerWidget {
       data: (data) => ListView(
         padding: EdgeInsets.fromLTRB(0, 8, 0, 8 + bottomInset),
         children: [
-          for (final track in data)
+          for (final (index, track) in data.indexed)
             TrackRow(
               title: track.title,
               subtitle: track.artist,
               onTap: () => ref
                   .read(playbackControllerProvider.notifier)
-                  .play(track, queue: data),
+                  .play(track, queue: data, queueIndex: index),
             ),
         ],
       ),

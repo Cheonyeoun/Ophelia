@@ -100,13 +100,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 : ListView(
                     padding: EdgeInsets.only(bottom: bottomInset),
                     children: [
-                      for (final track in _results)
+                      for (final (index, track) in _results.indexed)
                         TrackRow(
                           title: track.title,
                           subtitle: '${track.artist} · song',
                           onTap: () => ref
                               .read(playbackControllerProvider.notifier)
-                              .play(track, queue: _results),
+                              .play(track, queue: _results, queueIndex: index),
                         ),
                     ],
                   ),
