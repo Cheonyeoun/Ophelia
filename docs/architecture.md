@@ -100,7 +100,7 @@ class PlayTrack {
 
 **Learning note:** this is where "download-first, stream-fallback" logic lives — once, in one place — instead of scattered across UI code. Every screen that plays a track calls this same use case and gets the same guarantees.
 
-Key use cases: `PlayTrack`, `PauseTrack`, `ResumeTrack`, `SeekBy`, `SkipNext/Previous`, `SearchCatalog`, `GetArtistTracks`, `GetPlaylistTracks`, `BuildQueue`, `ToggleImmersive`, `ToggleShuffle`, `ToggleRepeatMode`, `DownloadTrack`, `RemoveDownload`, `ComputeTopSongs(window: 7d)`, `ExportLibrary`, `ImportLibrary`, `SavePlaylist`, `UpdateProfile`, `SetStreamingQuality`, `ToggleGaplessPlayback`, `SetDownloadQuality`, `ToggleWifiOnlyDownloads`, `SetConnectedServer`.
+Key use cases: `PlayTrack`, `PauseTrack`, `ResumeTrack`, `SeekBy`, `SeekTo`, `SkipNext/Previous`, `SearchCatalog`, `GetArtistTracks`, `GetPlaylistTracks`, `BuildQueue`, `ToggleImmersive`, `ToggleShuffle`, `ToggleRepeatMode`, `DownloadTrack`, `RemoveDownload`, `ComputeTopSongs(window: 7d)`, `ExportLibrary`, `ImportLibrary`, `SavePlaylist`, `UpdateProfile`, `SetStreamingQuality`, `ToggleGaplessPlayback`, `SetDownloadQuality`, `ToggleWifiOnlyDownloads`, `SetConnectedServer`.
 
 ### 3.3 Infrastructure layer (adapters — the only place packages are imported)
 

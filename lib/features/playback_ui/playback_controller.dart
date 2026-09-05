@@ -206,21 +206,63 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     }
   }
 
+  /// Seeks [offset] relative to the current position — used by the ±10s
+  /// buttons. The *target* passed to the engine is clamped to the
+  /// track's own bounds via [_clampToTrackDuration] before computing the
+  /// offset actually sent to [seekByProvider], so repeatedly seeking
+  /// forward near the end of a track can't push the engine's position
+  /// (or `state`'s) past the track's duration — without that, `+10s`
+  /// pressed near the end would leave `position` reading past
+  /// `duration`, and the *engine* itself (not just the UI-facing state)
+  /// would end up holding that same out-of-range value, since it's the
+  /// engine that receives the raw offset.
   Future<void> seekBy(Duration offset) => _mutex.run(() => _seekBy(offset));
 
   Future<void> _seekBy(Duration offset) async {
+    final currentPosition = state.playback.position;
+    final clampedTarget = _clampToTrackDuration(currentPosition + offset);
+    final clampedOffset = clampedTarget - currentPosition;
     final result = await ref.read(seekByProvider)(
-      currentPosition: state.playback.position,
-      offset: offset,
+      currentPosition: currentPosition,
+      offset: clampedOffset,
     );
     if (result case ResultFailure()) return;
 
-    final target = state.playback.position + offset;
     state = state.copyWith(
-      playback: state.playback.copyWith(
-        position: target < Duration.zero ? Duration.zero : target,
-      ),
+      playback: state.playback.copyWith(position: clampedTarget),
     );
+  }
+
+  /// Seeks to an absolute [target] position — used by
+  /// `PlaybackScrubber`'s drag-to-seek, via the `SeekTo` use case.
+  /// [target] is clamped to the track's bounds the same way [seekBy] is
+  /// — the scrubber itself already only ever asks for a position within
+  /// `[0, duration]`, but this doesn't rely on that.
+  Future<void> seekTo(Duration target) => _mutex.run(() => _seekTo(target));
+
+  Future<void> _seekTo(Duration target) async {
+    final clampedTarget = _clampToTrackDuration(target);
+    final result = await ref.read(seekToProvider)(clampedTarget);
+    if (result case ResultFailure()) return;
+
+    state = state.copyWith(
+      playback: state.playback.copyWith(position: clampedTarget),
+    );
+  }
+
+  /// Clamps [target] to `[Duration.zero, currentTrack's duration]` (or
+  /// just the zero floor if nothing's loaded) — shared by [_seekBy] and
+  /// [_seekTo] so neither can leave `position` negative or past the end
+  /// of the track, which would otherwise show nonsensical values like a
+  /// position greater than the duration next to it.
+  Duration _clampToTrackDuration(Duration target) {
+    var clamped = target < Duration.zero ? Duration.zero : target;
+    final track = state.playback.currentTrack;
+    if (track != null) {
+      final trackDuration = Duration(milliseconds: track.durationMs);
+      if (clamped > trackDuration) clamped = trackDuration;
+    }
+    return clamped;
   }
 
   /// Purely synchronous — no `await` means no interleaving is possible,
