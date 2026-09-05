@@ -7,6 +7,7 @@ import 'package:ophelia/core/domain/media_source_port.dart';
 import 'package:ophelia/core/domain/track.dart';
 import 'package:ophelia/core/error/failure.dart';
 import 'package:ophelia/core/error/result.dart';
+import 'package:ophelia/data/fakes/fake_local_library_port.dart';
 import 'package:ophelia/data/fakes/fake_media_source_port.dart';
 import 'package:ophelia/main.dart';
 
@@ -49,7 +50,14 @@ class _FailingArtistTracksMediaSource implements MediaSourcePort {
 /// instead of going nowhere.
 void main() {
   Future<ProviderContainer> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: OpheliaApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+        ],
+        child: const OpheliaApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     return ProviderScope.containerOf(tester.element(find.byType(OpheliaApp)));
   }
@@ -111,6 +119,7 @@ void main() {
             mediaSourceProvider.overrideWithValue(
               FakeMediaSourcePort(tracks: const [trickyTrack]),
             ),
+            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
           ],
           child: const OpheliaApp(),
         ),
@@ -145,6 +154,7 @@ void main() {
         ProviderScope(
           overrides: [
             mediaSourceProvider.overrideWithValue(failingMediaSource),
+            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
           ],
           child: const OpheliaApp(),
         ),

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ophelia/app/providers.dart';
 import 'package:ophelia/app/router.dart';
+import 'package:ophelia/data/fakes/fake_local_library_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
 import 'package:ophelia/features/playback_ui/playback_controller.dart';
 import 'package:ophelia/main.dart';
@@ -28,7 +30,14 @@ void main() {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(const ProviderScope(child: OpheliaApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+        ],
+        child: const OpheliaApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     return ProviderScope.containerOf(tester.element(find.byType(OpheliaApp)));
   }

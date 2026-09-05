@@ -40,10 +40,11 @@ import '../core/usecases/toggle_wifi_only_downloads.dart';
 import '../core/usecases/update_profile.dart';
 import '../data/fakes/fake_download_port.dart';
 import '../data/fakes/fake_export_import_port.dart';
-import '../data/fakes/fake_local_library_port.dart';
 import '../data/fakes/fake_media_source_port.dart';
 import '../data/fakes/fake_playback_engine_port.dart';
 import '../data/fakes/fake_settings_port.dart';
+import '../data/local_db/database.dart' hide Playlist;
+import '../data/local_db/drift_library_adapter.dart';
 import '../features/settings/settings_state.dart';
 
 // Top-level provider wiring / composition root (docs/architecture.md
@@ -51,17 +52,29 @@ import '../features/settings/settings_state.dart';
 // adapters/fakes directly. Swapping a real adapter in for a fake later
 // means overriding the one port provider it backs; nothing else changes.
 //
-// The port providers below wire in the fakes from lib/data/fakes/ —
-// temporary, UI-development-only stand-ins (see that folder's doc
-// comments) — until the real adapters under lib/data/ and
-// lib/playback/engine/ exist.
+// Most port providers below still wire in the fakes from lib/data/fakes/
+// — temporary, UI-development-only stand-ins (see that folder's doc
+// comments) — until their real adapters exist. `localLibraryProvider` is
+// the first exception: it's backed by the real `DriftLibraryAdapter`
+// (lib/data/local_db/) now. Widget tests that want the fake's predictable
+// sample data instead must override it explicitly in their `ProviderScope`
+// with `FakeLocalLibraryPort()`.
 
 final mediaSourceProvider = Provider<MediaSourcePort>(
   (ref) => FakeMediaSourcePort(),
 );
 
+/// The app's single Drift database instance — see
+/// lib/data/local_db/database.dart. Closed when this provider is
+/// disposed so the background isolate it opened doesn't leak.
+final opheliaDatabaseProvider = Provider<OpheliaDatabase>((ref) {
+  final db = OpheliaDatabase();
+  ref.onDispose(db.close);
+  return db;
+});
+
 final localLibraryProvider = Provider<LocalLibraryPort>(
-  (ref) => FakeLocalLibraryPort(),
+  (ref) => DriftLibraryAdapter(ref.watch(opheliaDatabaseProvider)),
 );
 
 final downloadPortProvider = Provider<DownloadPort>(

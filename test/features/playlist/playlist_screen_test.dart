@@ -60,7 +60,14 @@ class _FailingPlaylistLibrary implements LocalLibraryPort {
 /// screen instead of immediately playing the whole playlist.
 void main() {
   Future<ProviderContainer> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: OpheliaApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+        ],
+        child: const OpheliaApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     return ProviderScope.containerOf(tester.element(find.byType(OpheliaApp)));
   }
