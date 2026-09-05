@@ -9,6 +9,7 @@ enum RepeatMode { off, one, all }
 /// entities.
 class PlaybackState {
   final Track? currentTrack;
+  final int currentIndex;
   final Duration position;
   final List<Track> queue;
   final bool isImmersive;
@@ -17,8 +18,18 @@ class PlaybackState {
 
   /// Defensively copies [queue] into an unmodifiable list so mutating the
   /// caller's list after construction can't change this instance.
+  ///
+  /// [currentIndex] is [currentTrack]'s position within [queue] — sourced
+  /// from `PlaybackEnginePort.currentIndex` (the engine is the sole
+  /// authority on queue position; see core/usecases/skip_next.dart) so
+  /// the presentation layer can highlight the actual current entry by
+  /// position instead of matching queue entries by value, which breaks
+  /// as soon as the same track appears twice (see
+  /// features/playback_ui/queue_screen.dart). Defaults to `-1`
+  /// ("nothing set"), mirroring the engine's own initial value.
   PlaybackState({
     this.currentTrack,
+    this.currentIndex = -1,
     required this.position,
     required List<Track> queue,
     required this.isImmersive,
@@ -32,6 +43,7 @@ class PlaybackState {
   PlaybackState copyWith({
     Track? currentTrack,
     bool clearCurrentTrack = false,
+    int? currentIndex,
     Duration? position,
     List<Track>? queue,
     bool? isImmersive,
@@ -41,6 +53,7 @@ class PlaybackState {
     return PlaybackState(
       currentTrack:
           clearCurrentTrack ? null : (currentTrack ?? this.currentTrack),
+      currentIndex: currentIndex ?? this.currentIndex,
       position: position ?? this.position,
       queue: queue ?? this.queue,
       isImmersive: isImmersive ?? this.isImmersive,
@@ -55,6 +68,7 @@ class PlaybackState {
       other is PlaybackState &&
           runtimeType == other.runtimeType &&
           currentTrack == other.currentTrack &&
+          currentIndex == other.currentIndex &&
           position == other.position &&
           _listEquals(queue, other.queue) &&
           isImmersive == other.isImmersive &&
@@ -64,6 +78,7 @@ class PlaybackState {
   @override
   int get hashCode => Object.hash(
         currentTrack,
+        currentIndex,
         position,
         Object.hashAll(queue),
         isImmersive,

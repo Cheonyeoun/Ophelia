@@ -91,8 +91,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/artist/:name',
+            // go_router already percent-decodes path parameters -- an
+            // extra Uri.decodeComponent here double-decodes, which throws
+            // on a name containing a literal '%' (e.g. one already
+            // encoded) instead of just passing it through.
             builder: (context, state) => ArtistScreen(
-              artistName: Uri.decodeComponent(state.pathParameters['name']!),
+              artistName: state.pathParameters['name']!,
             ),
           ),
           GoRoute(

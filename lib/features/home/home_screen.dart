@@ -80,7 +80,9 @@ class HomeScreen extends ConsumerWidget {
                       .map((p) => _LibCard(
                             title: p.name,
                             subtitle: '${p.trackIds.length} tracks',
-                            onTap: () => context.push('/playlist/${p.id}'),
+                            onTap: () => context.push(
+                              '/playlist/${Uri.encodeComponent(p.id)}',
+                            ),
                           ))
                       .toList(),
                   orElse: () => const <Widget>[],

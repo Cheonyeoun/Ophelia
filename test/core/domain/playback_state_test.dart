@@ -22,6 +22,7 @@ void main() {
 
   final state = PlaybackState(
     currentTrack: trackA,
+    currentIndex: 0,
     position: const Duration(seconds: 30),
     queue: [trackA, trackB],
     isImmersive: false,
@@ -31,6 +32,7 @@ void main() {
 
   test('construction exposes the given field values', () {
     expect(state.currentTrack, trackA);
+    expect(state.currentIndex, 0);
     expect(state.position, const Duration(seconds: 30));
     expect(state.queue, [trackA, trackB]);
     expect(state.isImmersive, isFalse);
@@ -38,9 +40,22 @@ void main() {
     expect(state.shuffle, isFalse);
   });
 
+  test('currentIndex defaults to -1 when not given', () {
+    final fresh = PlaybackState(
+      position: Duration.zero,
+      queue: const [],
+      isImmersive: false,
+      repeatMode: RepeatMode.off,
+      shuffle: false,
+    );
+
+    expect(fresh.currentIndex, -1);
+  });
+
   test('two instances with the same values are equal', () {
     final other = PlaybackState(
       currentTrack: trackA,
+      currentIndex: 0,
       position: const Duration(seconds: 30),
       queue: [trackA, trackB],
       isImmersive: false,
@@ -50,6 +65,20 @@ void main() {
 
     expect(state, equals(other));
     expect(state.hashCode, equals(other.hashCode));
+  });
+
+  test('a differing currentIndex makes instances unequal', () {
+    final other = PlaybackState(
+      currentTrack: trackA,
+      currentIndex: 1,
+      position: const Duration(seconds: 30),
+      queue: [trackA, trackB],
+      isImmersive: false,
+      repeatMode: RepeatMode.off,
+      shuffle: false,
+    );
+
+    expect(state, isNot(equals(other)));
   });
 
   test('a differing queue makes instances unequal', () {
@@ -74,9 +103,17 @@ void main() {
     expect(updated.isImmersive, isTrue);
     expect(updated.repeatMode, RepeatMode.all);
     expect(updated.currentTrack, state.currentTrack);
+    expect(updated.currentIndex, state.currentIndex);
     expect(updated.position, state.position);
     expect(updated.queue, state.queue);
     expect(updated.shuffle, state.shuffle);
+  });
+
+  test('copyWith updates currentIndex', () {
+    final updated = state.copyWith(currentIndex: 1);
+
+    expect(updated.currentIndex, 1);
+    expect(updated.currentTrack, state.currentTrack);
   });
 
   test('copyWith(clearCurrentTrack: true) sets currentTrack to null', () {

@@ -98,7 +98,8 @@ class _PlaylistCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => context.push('/playlist/${playlist.id}'),
+      onTap: () =>
+          context.push('/playlist/${Uri.encodeComponent(playlist.id)}'),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(

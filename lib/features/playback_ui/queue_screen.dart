@@ -24,12 +24,15 @@ import 'playback_controller.dart';
 /// review this file's queue-navigation logic already went through) —
 /// deferred rather than bolted on here.
 ///
-/// The current track is matched by value, not position: `PlaybackState`
-/// only exposes `currentTrack`, not the engine's `currentIndex` (see
-/// app/playback_controller.dart's doc comment on why the engine, not the
-/// controller, owns queue position). A queue with the same track
-/// appearing more than once would highlight every matching row instead
-/// of just the one actually playing — not solved here.
+/// The current row is highlighted by *position* — `index ==
+/// playback.currentIndex` — not by matching `track` against
+/// `currentTrack` by value. A queue with the same track more than once
+/// would make a value match highlight every occurrence instead of just
+/// the one actually playing; this is the third time that exact bug
+/// pattern has shown up in this codebase (previously in
+/// `FakePlaybackEnginePort`'s skip logic, twice), which is why
+/// `currentIndex` was pushed down into `PlaybackState` itself instead of
+/// patched here again.
 class QueueScreen extends ConsumerWidget {
   const QueueScreen({super.key});
 
@@ -57,7 +60,7 @@ class QueueScreen extends ConsumerWidget {
                     subtitle: track.artist,
                     onTap: () =>
                         controller.play(track, queue: queue, queueIndex: index),
-                    trailing: track == playback.currentTrack
+                    trailing: index == playback.currentIndex
                         ? const Icon(
                             Icons.graphic_eq,
                             size: 16,

@@ -242,36 +242,46 @@ final playlistsProvider = FutureProvider<List<Playlist>>((ref) async {
   };
 });
 
-/// A single playlist by id, for the playlist detail screen — `null` if
-/// no such playlist exists, mirroring [userProfileProvider]'s pattern for
-/// a lookup that might not find anything.
-final playlistProvider = FutureProvider.family<Playlist?, String>((
+/// A single playlist by id, for the playlist detail screen. A
+/// [ResultFailure] (not found, storage, ...) is rethrown rather than
+/// swallowed into a default value, so it surfaces as a real
+/// `AsyncValue.error` the screen can show and retry — unlike
+/// [userProfileProvider]'s "missing profile is a normal, not-yet-set-up
+/// state" case, there's no legitimate reading of "this playlist id
+/// doesn't resolve" other than an actual problem.
+final playlistProvider = FutureProvider.family<Playlist, String>((
   ref,
   id,
 ) async {
   final result = await ref.watch(localLibraryProvider).getPlaylist(id);
   return switch (result) {
     Success(value: final playlist) => playlist,
-    ResultFailure() => null,
+    ResultFailure(failure: final f) => throw f,
   };
 });
 
 /// [id]'s playlist, resolved to full tracks in order, for the playlist
-/// detail screen to display and play from.
+/// detail screen to display and play from. A failure resolving the
+/// playlist itself propagates here too (awaiting [playlistProvider]'s
+/// failed future rethrows it) — both routes are watched from
+/// `PlaylistScreen`, but retrying either or both invalidates from
+/// scratch.
 final playlistTracksProvider = FutureProvider.family<List<Track>, String>((
   ref,
   id,
 ) async {
   final playlist = await ref.watch(playlistProvider(id).future);
-  if (playlist == null) return const [];
   final result = await ref.watch(getPlaylistTracksProvider)(playlist);
   return switch (result) {
     Success(value: final tracks) => tracks,
-    ResultFailure() => const [],
+    ResultFailure(failure: final f) => throw f,
   };
 });
 
-/// Every track credited to [artistName], for the artist detail screen.
+/// Every track credited to [artistName], for the artist detail screen. A
+/// [ResultFailure] is rethrown, not swallowed — see [playlistProvider]'s
+/// doc comment for why an empty list must only ever mean "genuinely no
+/// tracks," never "something went wrong."
 final artistTracksProvider = FutureProvider.family<List<Track>, String>((
   ref,
   artistName,
@@ -279,7 +289,7 @@ final artistTracksProvider = FutureProvider.family<List<Track>, String>((
   final result = await ref.watch(getArtistTracksProvider)(artistName);
   return switch (result) {
     Success(value: final tracks) => tracks,
-    ResultFailure() => const [],
+    ResultFailure(failure: final f) => throw f,
   };
 });
 

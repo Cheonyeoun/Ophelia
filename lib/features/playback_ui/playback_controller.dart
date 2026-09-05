@@ -62,7 +62,12 @@ class _AsyncMutex {
 /// through ports/fakes directly (docs/architecture.md §3.4). The engine
 /// (not this controller) tracks queue position, since it also has to
 /// decide the next index under shuffle/repeat — see
-/// core/usecases/skip_next.dart.
+/// core/usecases/skip_next.dart. After any use case that might move that
+/// position (`play`, `skipNext`, `skipPrevious`), this reads
+/// `PlaybackEnginePort.currentIndex` directly — a narrow, deliberate
+/// exception to "go through a use case" for a single synchronous getter,
+/// just to mirror the engine's own number onto `PlaybackState` for the
+/// presentation layer (see features/playback_ui/queue_screen.dart).
 ///
 /// Every method that mutates playback state runs through [_mutex], so two
 /// calls (e.g. a rapid `play` and `toggleShuffle`, or two concurrent
@@ -108,6 +113,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     state = state.copyWith(
       playback: state.playback.copyWith(
         currentTrack: track,
+        currentIndex: ref.read(playbackEngineProvider).currentIndex,
         position: Duration.zero,
         queue: effectiveQueue,
       ),
@@ -171,6 +177,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
         state = state.copyWith(
           playback: state.playback.copyWith(
             currentTrack: track,
+            currentIndex: ref.read(playbackEngineProvider).currentIndex,
             position: Duration.zero,
           ),
           isPlaying: true,
@@ -189,6 +196,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
         state = state.copyWith(
           playback: state.playback.copyWith(
             currentTrack: track,
+            currentIndex: ref.read(playbackEngineProvider).currentIndex,
             position: Duration.zero,
           ),
           isPlaying: true,

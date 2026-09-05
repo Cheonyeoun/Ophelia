@@ -69,4 +69,29 @@ void main() {
 
     expect(find.text('Queue is empty'), findsOneWidget);
   });
+
+  testWidgets(
+    'highlights only the track at the current index, not every '
+    'value-equal track, when the same track appears more than once in '
+    'the queue',
+    (tester) async {
+      final container = await pumpApp(tester);
+      final controller = container.read(playbackControllerProvider.notifier);
+      // sampleTracks[0] appears at both index 0 and index 2 -- played at
+      // index 2, so only that occurrence should be highlighted. Matching
+      // by value instead of position (the bug this regression test
+      // guards against) would highlight both.
+      await controller.play(
+        sampleTracks[0],
+        queue: [sampleTracks[0], sampleTracks[1], sampleTracks[0]],
+        queueIndex: 2,
+      );
+
+      final router = container.read(routerProvider);
+      router.push('/queue');
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
+    },
+  );
 }

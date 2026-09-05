@@ -76,6 +76,9 @@ class _PlayFailingEngine implements PlaybackEnginePort {
     }
     return inner.restoreNavigationState(snapshot);
   }
+
+  @override
+  int get currentIndex => inner.currentIndex;
 }
 
 void main() {

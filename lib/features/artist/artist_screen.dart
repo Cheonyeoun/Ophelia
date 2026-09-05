@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/layout_metrics.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
+import '../../app/widgets/error_state.dart';
 import '../../app/widgets/screen_top_bar.dart';
 import '../../app/widgets/track_row.dart';
 import '../playback_ui/playback_controller.dart';
@@ -52,7 +53,10 @@ class ArtistScreen extends ConsumerWidget {
                     ),
                 ],
               ),
-        error: (error, stack) => const SizedBox.shrink(),
+        error: (error, stack) => ErrorState(
+          error: error,
+          onRetry: () => ref.invalidate(artistTracksProvider(artistName)),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
       ),
     );
