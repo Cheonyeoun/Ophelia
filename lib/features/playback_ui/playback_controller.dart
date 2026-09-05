@@ -223,6 +223,29 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     );
   }
 
+  /// Seeks to an absolute [target] position — used by
+  /// `PlaybackScrubber`'s drag-to-seek. There's no absolute-seek use
+  /// case; this computes the equivalent offset and goes through the same
+  /// `SeekBy` use case [seekBy] does; the offset is computed from
+  /// [state] read *inside* the mutex-protected body, not by the caller
+  /// beforehand, so it's correct even if another seek was queued ahead
+  /// of it.
+  Future<void> seekTo(Duration target) => _mutex.run(() => _seekTo(target));
+
+  Future<void> _seekTo(Duration target) async {
+    final clampedTarget = target < Duration.zero ? Duration.zero : target;
+    final offset = clampedTarget - state.playback.position;
+    final result = await ref.read(seekByProvider)(
+      currentPosition: state.playback.position,
+      offset: offset,
+    );
+    if (result case ResultFailure()) return;
+
+    state = state.copyWith(
+      playback: state.playback.copyWith(position: clampedTarget),
+    );
+  }
+
   /// Purely synchronous — no `await` means no interleaving is possible,
   /// so this doesn't need [_mutex] the way the async methods above do.
   void toggleImmersive() {

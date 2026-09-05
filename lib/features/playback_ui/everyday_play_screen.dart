@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../app/widgets/cover_art.dart';
 import '../../core/domain/playback_state.dart';
 import 'playback_controller.dart';
+import 'playback_scrubber.dart';
 
 /// Everyday Play — pushed, no nav bar, no mini-player (it *is* the
 /// player). Matches the "Everyday play" frame in
@@ -103,11 +104,10 @@ class EverydayPlayScreen extends ConsumerWidget {
                       SizedBox(height: gap(22)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: _FlowLine(
-                          progress: track.durationMs == 0
-                              ? 0
-                              : uiState.playback.position.inMilliseconds /
-                                  track.durationMs,
+                        child: PlaybackScrubber(
+                          position: uiState.playback.position,
+                          duration: Duration(milliseconds: track.durationMs),
+                          onSeek: controller.seekTo,
                         ),
                       ),
                       Padding(
@@ -116,11 +116,11 @@ class EverydayPlayScreen extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              _formatDuration(uiState.playback.position),
+                              formatPlaybackDuration(uiState.playback.position),
                               style: const TextStyle(fontSize: 10, color: AppColors.mist),
                             ),
                             Text(
-                              _formatDuration(
+                              formatPlaybackDuration(
                                 Duration(milliseconds: track.durationMs),
                               ),
                               style: const TextStyle(fontSize: 10, color: AppColors.mist),
@@ -236,36 +236,3 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-class _FlowLine extends StatelessWidget {
-  final double progress;
-
-  const _FlowLine({required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    final clamped = progress.clamp(0.0, 1.0);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          children: [
-            Container(height: 1, color: AppColors.flowTrack),
-            Container(
-              height: 4,
-              width: constraints.maxWidth * clamped,
-              decoration: BoxDecoration(
-                color: AppColors.willow,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-String _formatDuration(Duration d) {
-  final minutes = d.inMinutes;
-  final seconds = d.inSeconds % 60;
-  return '$minutes:${seconds.toString().padLeft(2, '0')}';
-}

@@ -5,13 +5,21 @@ import 'package:go_router/go_router.dart';
 import '../../app/responsive.dart';
 import '../../app/theme.dart';
 import 'playback_controller.dart';
+import 'playback_scrubber.dart';
 
 /// Immersive Play — pushed, no nav bar, no mini-player. Matches the
 /// "Immersive play" frame in docs/design/ophelia-ui-mockup.html: full-
 /// bleed art with a scrim, title/artist, flow-line, and a simpler
-/// 3-button transport (no seek buttons, unlike Everyday Play). Both
-/// screens subscribe to the same playback state (docs/architecture.md
-/// §7) — they differ only in which controls they render.
+/// 3-button transport (no seek buttons, unlike Everyday Play — though
+/// the flow-line is itself an interactive scrubber now, on both
+/// screens). Both screens subscribe to the same playback state
+/// (docs/architecture.md §7) — they differ only in which controls they
+/// render.
+///
+/// Unlike Everyday Play's scrubber, this one's `lineAlwaysVisible` is
+/// false — the entire scrubber, not just its thumb, stays invisible
+/// until first touched, reinforcing this screen's minimal philosophy
+/// (nothing at all is drawn over the art until the viewer asks for it).
 ///
 /// The background art is already fully responsive (`Positioned.fill`),
 /// but the scrim's own padding/gaps were fixed pixel values that could
@@ -105,24 +113,11 @@ class ImmersivePlayScreen extends ConsumerWidget {
                           style: const TextStyle(fontSize: 13, color: AppColors.paleDim),
                         ),
                         SizedBox(height: gap(22)),
-                        Stack(
-                          children: [
-                            Container(height: 1, color: AppColors.flowTrack),
-                            FractionallySizedBox(
-                              widthFactor: track.durationMs == 0
-                                  ? 0
-                                  : (uiState.playback.position.inMilliseconds /
-                                          track.durationMs)
-                                      .clamp(0.0, 1.0),
-                              child: Container(
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: AppColors.willow,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                          ],
+                        PlaybackScrubber(
+                          position: uiState.playback.position,
+                          duration: Duration(milliseconds: track.durationMs),
+                          onSeek: controller.seekTo,
+                          lineAlwaysVisible: false,
                         ),
                         SizedBox(height: gap(26)),
                         Row(
