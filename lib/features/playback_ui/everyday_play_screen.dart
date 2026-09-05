@@ -105,6 +105,7 @@ class EverydayPlayScreen extends ConsumerWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: PlaybackScrubber(
+                          trackId: track.id,
                           position: uiState.playback.position,
                           duration: Duration(milliseconds: track.durationMs),
                           onSeek: controller.seekTo,

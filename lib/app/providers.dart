@@ -26,6 +26,7 @@ import '../core/usecases/resume_track.dart';
 import '../core/usecases/save_playlist.dart';
 import '../core/usecases/search_catalog.dart';
 import '../core/usecases/seek_by.dart';
+import '../core/usecases/seek_to.dart';
 import '../core/usecases/set_connected_server.dart';
 import '../core/usecases/set_download_quality.dart';
 import '../core/usecases/set_streaming_quality.dart';
@@ -112,6 +113,10 @@ final resumeTrackProvider = Provider<ResumeTrack>(
 
 final seekByProvider = Provider<SeekBy>(
   (ref) => SeekBy(ref.watch(playbackEngineProvider)),
+);
+
+final seekToProvider = Provider<SeekTo>(
+  (ref) => SeekTo(ref.watch(playbackEngineProvider)),
 );
 
 final skipNextProvider = Provider<SkipNext>(

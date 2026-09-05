@@ -114,6 +114,7 @@ class ImmersivePlayScreen extends ConsumerWidget {
                         ),
                         SizedBox(height: gap(22)),
                         PlaybackScrubber(
+                          trackId: track.id,
                           position: uiState.playback.position,
                           duration: Duration(milliseconds: track.durationMs),
                           onSeek: controller.seekTo,
