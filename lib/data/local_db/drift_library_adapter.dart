@@ -27,6 +27,12 @@ class DriftLibraryAdapter implements LocalLibraryPort {
 
   DriftLibraryAdapter(this._db);
 
+  /// The one and only `profile` row's fixed id -- see [Profile]'s doc
+  /// comment on why a deliberate constant, rather than "whatever row
+  /// happens to already be there," is what makes [saveProfile] an atomic
+  /// upsert instead of a racy check-then-insert-or-update.
+  static const profileRowId = 1;
+
   /// Ensures a placeholder `cached_tracks` row exists for [trackId], so
   /// that inserting a `playlist_tracks`/`listening_events` row
   /// referencing it doesn't violate the foreign key -- see tables.dart's
@@ -44,15 +50,60 @@ class DriftLibraryAdapter implements LocalLibraryPort {
   @override
   Future<Result<List<domain.Playlist>, Failure>> getPlaylists() async {
     try {
-      final rows =
-          await (_db.select(_db.playlists)
-                ..orderBy([(p) => OrderingTerm(expression: p.createdAt)]))
-              .get();
-      final playlists = await Future.wait(rows.map(_toDomainPlaylist));
-      return Result.success(playlists);
+      // One join query for every playlist and its tracks together, rather
+      // than one query per playlist (_toDomainPlaylist) -- that N+1 would
+      // scale with the number of playlists instead of staying constant.
+      // A left outer join keeps a playlist with zero tracks in the result
+      // (as a single row with null playlist_tracks columns) instead of an
+      // inner join silently dropping it.
+      final query = _db.select(_db.playlists).join([
+        leftOuterJoin(
+          _db.playlistTracks,
+          _db.playlistTracks.playlistId.equalsExp(_db.playlists.id),
+        ),
+      ])
+        ..orderBy([
+          // id after createdAt breaks ties between playlists created in
+          // the same instant, so every row belonging to one playlist stays
+          // contiguous -- required for the single linear grouping pass in
+          // _groupJoinedRows below to be correct.
+          OrderingTerm(expression: _db.playlists.createdAt),
+          OrderingTerm(expression: _db.playlists.id),
+          OrderingTerm(expression: _db.playlistTracks.position),
+        ]);
+
+      final rows = await query.get();
+      return Result.success(_groupJoinedRows(rows));
     } on SqliteException catch (e) {
       return Result.failure(StorageFailure(e.message));
     }
+  }
+
+  /// Groups the flat, joined `playlists`/`playlist_tracks` result set from
+  /// [getPlaylists] back into [domain.Playlist]s, one linear pass over
+  /// rows already ordered so each playlist's own rows are contiguous and
+  /// its tracks are already in position order.
+  List<domain.Playlist> _groupJoinedRows(List<TypedResult> rows) {
+    final order = <String>[];
+    final names = <String, String>{};
+    final trackIds = <String, List<String>>{};
+
+    for (final row in rows) {
+      final playlist = row.readTable(_db.playlists);
+      final track = row.readTableOrNull(_db.playlistTracks);
+
+      final ids = trackIds.putIfAbsent(playlist.id, () {
+        order.add(playlist.id);
+        names[playlist.id] = playlist.name;
+        return [];
+      });
+      if (track != null) ids.add(track.trackId);
+    }
+
+    return [
+      for (final id in order)
+        domain.Playlist(id: id, name: names[id]!, trackIds: trackIds[id]!),
+    ];
   }
 
   @override
@@ -152,7 +203,9 @@ class DriftLibraryAdapter implements LocalLibraryPort {
   @override
   Future<Result<UserProfile, Failure>> getProfile() async {
     try {
-      final row = await _db.select(_db.profile).getSingleOrNull();
+      final row = await (_db.select(
+        _db.profile,
+      )..where((p) => p.id.equals(profileRowId))).getSingleOrNull();
       if (row == null) {
         return Result.failure(const NotFoundFailure('no profile set up yet'));
       }
@@ -171,20 +224,23 @@ class DriftLibraryAdapter implements LocalLibraryPort {
   @override
   Future<Result<void, Failure>> saveProfile(UserProfile profile) async {
     try {
-      final existing = await _db.select(_db.profile).getSingleOrNull();
-      final companion = ProfileCompanion(
-        displayName: Value(profile.displayName),
-        backgroundPath: Value(profile.backgroundImagePath),
-        profileImagePath: Value(profile.profileImagePath),
-      );
-
-      if (existing == null) {
-        await _db.into(_db.profile).insert(companion);
-      } else {
-        await (_db.update(
-          _db.profile,
-        )..where((p) => p.id.equals(existing.id))).write(companion);
-      }
+      // A single atomic upsert against the fixed profileRowId, rather
+      // than a "check if any row exists, then insert or update" -- two
+      // concurrent saveProfile calls both reading "no row yet" and then
+      // both inserting used to be able to race into two rows (or a
+      // constraint violation, depending on timing); ON CONFLICT DO UPDATE
+      // makes that structurally impossible instead of just less likely,
+      // since SQLite resolves the conflict within the single statement.
+      await _db
+          .into(_db.profile)
+          .insertOnConflictUpdate(
+            ProfileCompanion(
+              id: const Value(profileRowId),
+              displayName: Value(profile.displayName),
+              backgroundPath: Value(profile.backgroundImagePath),
+              profileImagePath: Value(profile.profileImagePath),
+            ),
+          );
       return const Result.success(null);
     } on SqliteException catch (e) {
       return Result.failure(StorageFailure(e.message));

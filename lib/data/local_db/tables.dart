@@ -70,14 +70,19 @@ class ListeningEvents extends Table {
 }
 
 /// A singleton table: the app has exactly one local user, so this only
-/// ever holds zero or one row (see [DriftLibraryAdapter.getProfile]/
-/// [DriftLibraryAdapter.saveProfile]) rather than being keyed by a
-/// meaningful user id.
+/// ever holds exactly one row, at [DriftLibraryAdapter.profileRowId] --
+/// not autoincrement, since the point is a fixed, known id [saveProfile]
+/// can always target directly with a single atomic
+/// `insertOnConflictUpdate`, rather than a "check if any row exists, then
+/// insert or update" pattern racy under concurrent calls.
 class Profile extends Table {
-  IntColumn get id => integer().autoIncrement()();
+  IntColumn get id => integer()();
   TextColumn get displayName => text()();
   TextColumn get backgroundPath => text().nullable()();
   TextColumn get profileImagePath => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 /// Not written by [DriftLibraryAdapter] -- downloads belong to

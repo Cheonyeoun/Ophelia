@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
@@ -11,7 +12,30 @@ import 'package:ophelia/data/local_db/drift_library_adapter.dart';
 
 import '../../support/result_test_helpers.dart';
 
+/// Counts `SELECT` statements sent to the wrapped executor, so a test can
+/// assert a query count stays flat rather than scaling with row count
+/// (see the getPlaylists test below) without depending on timing.
+class _SelectCountingInterceptor extends QueryInterceptor {
+  int selectCount = 0;
+
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    QueryExecutor executor,
+    String statement,
+    List<Object?> args,
+  ) {
+    selectCount++;
+    return super.runSelect(executor, statement, args);
+  }
+}
+
 void main() {
+  // Every test below deliberately opens its own independent, isolated
+  // in-memory OpheliaDatabase -- not the same connection reused unsafely
+  // -- so silence drift's "opened multiple times" warning, which assumes
+  // the less common case of accidentally sharing one executor.
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
   late OpheliaDatabase database;
   late DriftLibraryAdapter adapter;
 
@@ -118,6 +142,34 @@ void main() {
         expect(tracksAfter, isEmpty);
       },
     );
+
+    test(
+      'getPlaylists issues a single SELECT regardless of how many '
+      'playlists exist, instead of one additional query per playlist '
+      '(the N+1 pattern a per-playlist follow-up query would produce)',
+      () async {
+        final counter = _SelectCountingInterceptor();
+        final countingDatabase = OpheliaDatabase(
+          NativeDatabase.memory().interceptWith(counter),
+        );
+        addTearDown(countingDatabase.close);
+        final countingAdapter = DriftLibraryAdapter(countingDatabase);
+
+        for (var i = 0; i < 50; i++) {
+          unwrapValue(
+            await countingAdapter.savePlaylist(
+              Playlist(id: 'p$i', name: 'Playlist $i', trackIds: ['t1', 't2']),
+            ),
+          );
+        }
+
+        counter.selectCount = 0; // only count getPlaylists' own queries
+        final playlists = unwrapValue(await countingAdapter.getPlaylists());
+
+        expect(playlists, hasLength(50));
+        expect(counter.selectCount, 1);
+      },
+    );
   });
 
   group('profile', () {
@@ -167,6 +219,27 @@ void main() {
       final profile = unwrapValue(await adapter.getProfile());
       expect(profile.backgroundImagePath, isNull);
     });
+
+    test(
+      'two concurrent saveProfile calls -- neither awaited before the '
+      'other starts -- still leave exactly one profile row, not a '
+      'duplicate from both racing past a "no row yet" check before '
+      'either inserts',
+      () async {
+        await Future.wait([
+          adapter.saveProfile(const UserProfile(displayName: 'First')),
+          adapter.saveProfile(const UserProfile(displayName: 'Second')),
+        ]);
+
+        final rows = await database.select(database.profile).get();
+        expect(rows, hasLength(1));
+
+        // Whichever wrote last should be the value that stuck -- the
+        // point of this test is "exactly one row", not which one wins.
+        final profile = unwrapValue(await adapter.getProfile());
+        expect(['First', 'Second'], contains(profile.displayName));
+      },
+    );
   });
 
   group('listening events', () {

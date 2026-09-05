@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/layout_metrics.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
+import '../../core/domain/user_profile.dart';
 
 /// The Settings root tab — matches the "Settings" frame in
 /// docs/design/ophelia-ui-mockup-2.html. Every toggle/value row is wired
@@ -35,7 +36,22 @@ class SettingsScreen extends ConsumerWidget {
           ),
           profile.maybeWhen(
             data: (data) => data == null
-                ? const SizedBox.shrink()
+                // A fresh install has no profile row yet -- without this,
+                // there would be no way to ever create one (see
+                // DriftLibraryAdapter.getProfile's NotFoundFailure). A
+                // sensible default the user can rename later beats
+                // silently hiding the row until some other flow happens
+                // to create a profile.
+                ? _SettingRow(
+                    icon: Icons.person_add_alt_outlined,
+                    label: 'Set up profile',
+                    onTap: () async {
+                      await ref.read(updateProfileProvider)(
+                        const UserProfile(displayName: 'New Listener'),
+                      );
+                      ref.invalidate(userProfileProvider);
+                    },
+                  )
                 : _ProfileRow(
                     displayName: data.displayName,
                     onTap: () => context.push('/profile'),

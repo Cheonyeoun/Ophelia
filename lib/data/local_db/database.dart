@@ -25,6 +25,14 @@ class OpheliaDatabase extends _$OpheliaDatabase {
   /// requirement) — `driftDatabase` (package:drift_flutter) defaults to
   /// `NativeDatabase.createBackgroundConnection` under the hood, so no
   /// query here ever runs on the same isolate as the UI.
+  ///
+  /// Native platforms only (Android, iOS, macOS, Linux, Windows). Web is a
+  /// known gap, not an oversight missed by this adapter: `driftDatabase`
+  /// needs a `sqlite3.wasm` module and a drift worker script bundled into
+  /// `web/` to run there at all (see
+  /// https://drift.simonbinder.eu/web/#prerequisites), which is separate,
+  /// already-scoped follow-up work (branch `web-sqlite-support`) rather
+  /// than something to guess at here.
   static QueryExecutor defaultConnection() => driftDatabase(name: 'ophelia');
 
   @override
