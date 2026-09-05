@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ophelia/app/providers.dart';
+import 'package:ophelia/data/fakes/fake_local_library_port.dart';
 import 'package:ophelia/features/settings/settings_screen.dart';
 
 void main() {
@@ -9,8 +11,13 @@ void main() {
     'tapping a settings toggle flips and holds its visual state',
     (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SettingsScreen())),
+        ProviderScope(
+          overrides: [
+            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SettingsScreen()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -43,8 +50,13 @@ void main() {
     'state',
     (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SettingsScreen())),
+        ProviderScope(
+          overrides: [
+            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SettingsScreen()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -70,8 +82,13 @@ void main() {
     'tapping a settings value row cycles its displayed value and holds it',
     (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SettingsScreen())),
+        ProviderScope(
+          overrides: [
+            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SettingsScreen()),
+          ),
         ),
       );
       await tester.pumpAndSettle();

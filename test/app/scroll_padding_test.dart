@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ophelia/app/providers.dart';
 import 'package:ophelia/app/router.dart';
 import 'package:ophelia/app/theme.dart';
+import 'package:ophelia/data/fakes/fake_local_library_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
 import 'package:ophelia/features/playback_ui/playback_controller.dart';
 import 'package:ophelia/features/settings/settings_screen.dart';
@@ -20,7 +22,14 @@ void main() {
     "Settings' list reserves extra bottom padding once a track is "
     "loaded, so the mini-player can't cover its last row",
     (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: OpheliaApp()));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          ],
+          child: const OpheliaApp(),
+        ),
+      );
       await tester.pumpAndSettle();
       final container = ProviderScope.containerOf(
         tester.element(find.byType(OpheliaApp)),
