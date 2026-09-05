@@ -81,4 +81,12 @@ abstract interface class PlaybackEnginePort {
   Future<Result<void, Failure>> restoreNavigationState(
     PlaybackNavigationSnapshot snapshot,
   );
+
+  /// The current track's position within the engine's queue, or `-1` if
+  /// nothing is set. The sole authority on queue position (see
+  /// core/usecases/skip_next.dart) — read by `PlaybackController` after
+  /// any call that might have moved it, and mirrored onto
+  /// `PlaybackState.currentIndex` so the presentation layer can highlight
+  /// by position instead of matching queue entries by value.
+  int get currentIndex;
 }

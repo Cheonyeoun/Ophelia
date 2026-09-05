@@ -48,6 +48,7 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   /// skipNext/skipPrevious, set directly by [setQueue] and moved by ±1 on
   /// skip. Kept separate from matching on [currentTrack]'s id or value so
   /// duplicate tracks in the queue don't confuse navigation.
+  @override
   int currentIndex = -1;
 
   /// Indices already visited during the current shuffle "round", in

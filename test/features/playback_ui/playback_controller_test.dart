@@ -77,6 +77,9 @@ class _GatedEngine implements PlaybackEnginePort {
     PlaybackNavigationSnapshot snapshot,
   ) =>
       inner.restoreNavigationState(snapshot);
+
+  @override
+  int get currentIndex => inner.currentIndex;
 }
 
 /// Covers the fix for rapid double-taps on shuffle/repeat: each tap must

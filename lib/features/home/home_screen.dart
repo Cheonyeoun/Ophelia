@@ -77,7 +77,13 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 ...playlists.maybeWhen(
                   data: (data) => data
-                      .map((p) => _LibCard(title: p.name, subtitle: '${p.trackIds.length} tracks'))
+                      .map((p) => _LibCard(
+                            title: p.name,
+                            subtitle: '${p.trackIds.length} tracks',
+                            onTap: () => context.push(
+                              '/playlist/${Uri.encodeComponent(p.id)}',
+                            ),
+                          ))
                       .toList(),
                   orElse: () => const <Widget>[],
                 ),

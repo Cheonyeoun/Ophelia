@@ -15,6 +15,8 @@ import '../core/usecases/build_queue.dart';
 import '../core/usecases/compute_top_songs.dart';
 import '../core/usecases/download_track.dart';
 import '../core/usecases/export_library.dart';
+import '../core/usecases/get_artist_tracks.dart';
+import '../core/usecases/get_playlist_tracks.dart';
 import '../core/usecases/import_library.dart';
 import '../core/usecases/listening_session.dart';
 import '../core/usecases/pause_track.dart';
@@ -139,6 +141,14 @@ final buildQueueProvider = Provider<BuildQueue>(
   ),
 );
 
+final getArtistTracksProvider = Provider<GetArtistTracks>(
+  (ref) => GetArtistTracks(ref.watch(mediaSourceProvider)),
+);
+
+final getPlaylistTracksProvider = Provider<GetPlaylistTracks>(
+  (ref) => GetPlaylistTracks(ref.watch(mediaSourceProvider)),
+);
+
 final toggleImmersiveProvider = Provider<ToggleImmersive>(
   (ref) => const ToggleImmersive(),
 );
@@ -229,6 +239,57 @@ final playlistsProvider = FutureProvider<List<Playlist>>((ref) async {
   return switch (result) {
     Success(value: final playlists) => playlists,
     ResultFailure() => const [],
+  };
+});
+
+/// A single playlist by id, for the playlist detail screen. A
+/// [ResultFailure] (not found, storage, ...) is rethrown rather than
+/// swallowed into a default value, so it surfaces as a real
+/// `AsyncValue.error` the screen can show and retry — unlike
+/// [userProfileProvider]'s "missing profile is a normal, not-yet-set-up
+/// state" case, there's no legitimate reading of "this playlist id
+/// doesn't resolve" other than an actual problem.
+final playlistProvider = FutureProvider.family<Playlist, String>((
+  ref,
+  id,
+) async {
+  final result = await ref.watch(localLibraryProvider).getPlaylist(id);
+  return switch (result) {
+    Success(value: final playlist) => playlist,
+    ResultFailure(failure: final f) => throw f,
+  };
+});
+
+/// [id]'s playlist, resolved to full tracks in order, for the playlist
+/// detail screen to display and play from. A failure resolving the
+/// playlist itself propagates here too (awaiting [playlistProvider]'s
+/// failed future rethrows it) — both routes are watched from
+/// `PlaylistScreen`, but retrying either or both invalidates from
+/// scratch.
+final playlistTracksProvider = FutureProvider.family<List<Track>, String>((
+  ref,
+  id,
+) async {
+  final playlist = await ref.watch(playlistProvider(id).future);
+  final result = await ref.watch(getPlaylistTracksProvider)(playlist);
+  return switch (result) {
+    Success(value: final tracks) => tracks,
+    ResultFailure(failure: final f) => throw f,
+  };
+});
+
+/// Every track credited to [artistName], for the artist detail screen. A
+/// [ResultFailure] is rethrown, not swallowed — see [playlistProvider]'s
+/// doc comment for why an empty list must only ever mean "genuinely no
+/// tracks," never "something went wrong."
+final artistTracksProvider = FutureProvider.family<List<Track>, String>((
+  ref,
+  artistName,
+) async {
+  final result = await ref.watch(getArtistTracksProvider)(artistName);
+  return switch (result) {
+    Success(value: final tracks) => tracks,
+    ResultFailure(failure: final f) => throw f,
   };
 });
 

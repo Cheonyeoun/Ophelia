@@ -29,6 +29,15 @@ class FakeMediaSourcePort implements MediaSourcePort {
   }
 
   @override
+  Future<Result<List<Track>, Failure>> getTracksByArtist(
+    String artistName,
+  ) async {
+    return Result.success(
+      tracks.where((track) => track.artist == artistName).toList(),
+    );
+  }
+
+  @override
   Future<Result<String, Failure>> getStreamUrl(String trackId) async {
     final exists = tracks.any((track) => track.id == trackId);
     if (!exists) {
