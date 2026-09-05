@@ -83,12 +83,33 @@ class _PlaybackScrubberState extends State<PlaybackScrubber> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant PlaybackScrubber oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The track (and so its duration) changed while a drag was in
+    // progress -- e.g. it was skipped from elsewhere while this finger
+    // was still down. The in-flight drag fraction was computed against
+    // the old track's length and means nothing against the new one, so
+    // drop it rather than committing a seek to a nonsensical position on
+    // release.
+    // No setState needed -- didUpdateWidget already runs immediately
+    // before the rebuild that's about to happen because widget changed.
+    if (_dragFraction != null && oldWidget.duration != widget.duration) {
+      _dragFraction = null;
+    }
+  }
+
   double get _actualFraction => widget.duration == Duration.zero
       ? 0.0
       : (widget.position.inMilliseconds / widget.duration.inMilliseconds)
           .clamp(0.0, 1.0);
 
   double get _displayFraction => _dragFraction ?? _actualFraction;
+
+  Duration get _displayDuration => Duration(
+        milliseconds:
+            (widget.duration.inMilliseconds * _displayFraction).round(),
+      );
 
   void _reveal() {
     _hideTimer?.cancel();
@@ -108,79 +129,79 @@ class _PlaybackScrubberState extends State<PlaybackScrubber> {
   }
 
   void _commitSeek() {
-    final fraction = _displayFraction;
+    final target = _displayDuration;
     _dragFraction = null;
-    final targetMs = (widget.duration.inMilliseconds * fraction).round();
-    widget.onSeek(Duration(milliseconds: targetMs));
+    widget.onSeek(target);
     _scheduleHide();
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        return SizedBox(
-          height: _trackFootprint,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Center(
-                child: AnimatedOpacity(
-                  key: playbackScrubberLineKey,
-                  opacity: widget.lineAlwaysVisible || _revealed ? 1 : 0,
-                  duration: _fadeDuration,
-                  child: _Track(fraction: _displayFraction),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: -(_touchTargetHeight - _trackFootprint) / 2,
-                bottom: -(_touchTargetHeight - _trackFootprint) / 2,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (_) => _reveal(),
-                  onTapUp: (_) => _commitSeek(),
-                  onHorizontalDragStart: (details) {
-                    _reveal();
-                    _updateDrag(details.localPosition.dx, width);
-                  },
-                  onHorizontalDragUpdate: (details) =>
-                      _updateDrag(details.localPosition.dx, width),
-                  onHorizontalDragEnd: (_) => _commitSeek(),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-              if (_revealed) ...[
-                Positioned(
-                  left: width * _displayFraction,
-                  top: (_trackFootprint - _thumbDiameter) / 2,
-                  child: FractionalTranslation(
-                    translation: const Offset(-0.5, 0),
-                    child: _Thumb(key: playbackScrubberThumbKey),
+    return Semantics(
+      slider: true,
+      label: 'Playback position',
+      value: formatPlaybackDuration(_displayDuration),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          return SizedBox(
+            height: _trackFootprint,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Center(
+                  child: AnimatedOpacity(
+                    key: playbackScrubberLineKey,
+                    opacity: widget.lineAlwaysVisible || _revealed ? 1 : 0,
+                    duration: _fadeDuration,
+                    child: _Track(fraction: _displayFraction),
                   ),
                 ),
                 Positioned(
-                  left: width * _displayFraction,
-                  top: -22,
-                  child: FractionalTranslation(
-                    translation: const Offset(-0.5, 0),
-                    child: _TimeLabel(
-                      key: playbackScrubberTimeLabelKey,
-                      duration: Duration(
-                        milliseconds: (widget.duration.inMilliseconds *
-                                _displayFraction)
-                            .round(),
+                  left: 0,
+                  right: 0,
+                  top: -(_touchTargetHeight - _trackFootprint) / 2,
+                  bottom: -(_touchTargetHeight - _trackFootprint) / 2,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (_) => _reveal(),
+                    onTapUp: (_) => _commitSeek(),
+                    onHorizontalDragStart: (details) {
+                      _reveal();
+                      _updateDrag(details.localPosition.dx, width);
+                    },
+                    onHorizontalDragUpdate: (details) =>
+                        _updateDrag(details.localPosition.dx, width),
+                    onHorizontalDragEnd: (_) => _commitSeek(),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+                if (_revealed) ...[
+                  Positioned(
+                    left: width * _displayFraction,
+                    top: (_trackFootprint - _thumbDiameter) / 2,
+                    child: FractionalTranslation(
+                      translation: const Offset(-0.5, 0),
+                      child: _Thumb(key: playbackScrubberThumbKey),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * _displayFraction,
+                    top: -22,
+                    child: FractionalTranslation(
+                      translation: const Offset(-0.5, 0),
+                      child: _TimeLabel(
+                        key: playbackScrubberTimeLabelKey,
+                        duration: _displayDuration,
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }

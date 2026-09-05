@@ -189,4 +189,87 @@ void main() {
       expect(playback.shuffle, isTrue);
     },
   );
+
+  group('seek clamping', () {
+    test(
+      'seekBy never pushes position past the track\'s duration, and the '
+      'engine itself stays in sync with the clamped value -- not just '
+      'the UI-facing state',
+      () async {
+        final engine = FakePlaybackEnginePort();
+        final container = ProviderContainer(
+          overrides: [playbackEngineProvider.overrideWithValue(engine)],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(
+          playbackControllerProvider.notifier,
+        );
+        final track = sampleTracks.first;
+        await controller.play(track);
+        await controller.seekTo(
+          Duration(milliseconds: track.durationMs - 5000),
+        );
+
+        // Push forward by far more than what's left in the track.
+        await controller.seekBy(const Duration(seconds: 30));
+
+        final expected = Duration(milliseconds: track.durationMs);
+        expect(
+          container.read(playbackControllerProvider).playback.position,
+          expected,
+        );
+        // The engine receives the offset directly (see SeekBy) -- if the
+        // controller clamped only the UI-facing state and not the offset
+        // actually sent, the engine's own position would silently drift
+        // past the track's end even though the UI showed a sane value.
+        expect(engine.position, expected);
+      },
+    );
+
+    test(
+      'seekBy never pushes position below zero',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          playbackControllerProvider.notifier,
+        );
+        await controller.play(sampleTracks.first);
+
+        await controller.seekBy(const Duration(seconds: -30));
+
+        expect(
+          container.read(playbackControllerProvider).playback.position,
+          Duration.zero,
+        );
+      },
+    );
+
+    test(
+      'seekTo clamps an out-of-range target to within [0, duration]',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          playbackControllerProvider.notifier,
+        );
+        final track = sampleTracks.first;
+        await controller.play(track);
+
+        await controller.seekTo(
+          Duration(milliseconds: track.durationMs + 60000),
+        );
+        expect(
+          container.read(playbackControllerProvider).playback.position,
+          Duration(milliseconds: track.durationMs),
+        );
+
+        await controller.seekTo(const Duration(seconds: -30));
+        expect(
+          container.read(playbackControllerProvider).playback.position,
+          Duration.zero,
+        );
+      },
+    );
+  });
 }

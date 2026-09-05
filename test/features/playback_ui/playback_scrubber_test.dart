@@ -268,4 +268,84 @@ void main() {
       },
     );
   });
+
+  testWidgets(
+    'a drag in progress is discarded if the duration changes underneath '
+    'it (e.g. the track was skipped from elsewhere while still held), '
+    'instead of later seeking to a position computed against the wrong '
+    'track',
+    (tester) async {
+      var duration = const Duration(seconds: 100);
+      late StateSetter setOuterState;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                setOuterState = setState;
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 300,
+                    child: PlaybackScrubber(
+                      position: Duration.zero,
+                      duration: duration,
+                      onSeek: (_) {},
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      final topLeft = tester.getTopLeft(find.byType(PlaybackScrubber));
+      final gesture = await tester.startGesture(
+        topLeft + const Offset(5, 8),
+      );
+      await tester.pump();
+      await gesture.moveTo(topLeft + const Offset(150, 8));
+      await tester.pump();
+
+      // Dragged to the halfway point of a 100s track -> ~0:50.
+      expect(find.text('0:50'), findsOneWidget);
+
+      // The track (and its duration) changes while the finger is still
+      // down -- e.g. skipped via a notification/lock-screen control.
+      setOuterState(() => duration = const Duration(seconds: 200));
+      await tester.pump();
+
+      // The stale drag is dropped; the label falls back to the actual
+      // (unchanged) position, not the meaningless leftover fraction.
+      expect(find.text('0:00'), findsOneWidget);
+
+      await gesture.up();
+      await tester.pump();
+    },
+  );
+
+  testWidgets(
+    'exposes a slider semantics node with the current position as its '
+    'value, for screen readers',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        wrap(
+          PlaybackScrubber(
+            position: const Duration(seconds: 42),
+            duration: const Duration(seconds: 100),
+            onSeek: (_) {},
+          ),
+        ),
+      );
+
+      final semantics = tester.getSemantics(find.byType(PlaybackScrubber));
+      expect(semantics.flagsCollection.isSlider, isTrue);
+      expect(semantics.value, '0:42');
+
+      handle.dispose();
+    },
+  );
 }
