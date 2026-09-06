@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'tables.dart';
 
@@ -20,20 +21,35 @@ class OpheliaDatabase extends _$OpheliaDatabase {
   OpheliaDatabase([QueryExecutor? executor])
       : super(executor ?? defaultConnection());
 
-  /// The real connection used outside tests: a background-isolate-backed
-  /// native database (docs/architecture.md §5.3's "off the UI thread"
-  /// requirement) — `driftDatabase` (package:drift_flutter) defaults to
-  /// `NativeDatabase.createBackgroundConnection` under the hood, so no
-  /// query here ever runs on the same isolate as the UI.
+  /// The real connection used outside tests. `driftDatabase`
+  /// (package:drift_flutter) is conditionally implemented per platform
+  /// (see its own `connect.dart`), so this same call compiles to two
+  /// genuinely different backends:
   ///
-  /// Native platforms only (Android, iOS, macOS, Linux, Windows). Web is a
-  /// known gap, not an oversight missed by this adapter: `driftDatabase`
-  /// needs a `sqlite3.wasm` module and a drift worker script bundled into
-  /// `web/` to run there at all (see
-  /// https://drift.simonbinder.eu/web/#prerequisites), which is separate,
-  /// already-scoped follow-up work (branch `web-sqlite-support`) rather
-  /// than something to guess at here.
-  static QueryExecutor defaultConnection() => driftDatabase(name: 'ophelia');
+  /// - **Native** (Android, iOS, macOS, Linux, Windows): a background-
+  ///   isolate-backed native database (docs/architecture.md §5.3's "off
+  ///   the UI thread" requirement) — `driftDatabase` defaults to
+  ///   `NativeDatabase.createBackgroundConnection` under the hood, so no
+  ///   query here ever runs on the same isolate as the UI. [native] is
+  ///   ignored on web.
+  /// - **Web**: a WebAssembly SQLite build running in a worker (also off
+  ///   the UI thread) via `sqlite3.wasm` + `drift_worker.js`, both under
+  ///   `web/` — see https://drift.simonbinder.eu/web/#prerequisites.
+  ///   Both files must come from the exact same drift/sqlite3 package
+  ///   versions this app depends on (check pubspec.lock); `web/
+  ///   drift_worker.js` here is copied straight from the installed
+  ///   `drift` package (`drift_worker.js` at that package's root, built
+  ///   by drift's own release process), and `web/sqlite3.wasm` is
+  ///   downloaded from the matching tag on
+  ///   https://github.com/simolus3/sqlite3.dart/releases. [web] is
+  ///   required when compiling for web and ignored on native.
+  static QueryExecutor defaultConnection() => driftDatabase(
+        name: 'ophelia',
+        web: DriftWebOptions(
+          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+          driftWorker: Uri.parse('drift_worker.js'),
+        ),
+      );
 
   @override
   int get schemaVersion => 1;
@@ -48,11 +64,15 @@ class OpheliaDatabase extends _$OpheliaDatabase {
           // playlist_tracks) would silently do nothing.
           await customStatement('PRAGMA foreign_keys = ON');
           // docs/architecture.md §5.3: so background writes (listening
-          // events) don't block foreground reads (library browsing). A
-          // no-op on the in-memory database tests use -- SQLite doesn't
-          // support WAL for ':memory:' and just keeps its existing
-          // journal mode instead of erroring.
-          await customStatement('PRAGMA journal_mode = WAL');
+          // events) don't block foreground reads (library browsing).
+          // Skipped on web -- drift's wasm backend documents WAL as
+          // unsupported there (https://drift.simonbinder.eu/web/) -- and
+          // a no-op on the in-memory database tests use, since SQLite
+          // doesn't support WAL for ':memory:' and just keeps its
+          // existing journal mode instead of erroring.
+          if (!kIsWeb) {
+            await customStatement('PRAGMA journal_mode = WAL');
+          }
         },
       );
 }

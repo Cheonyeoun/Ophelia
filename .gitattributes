@@ -1,0 +1,6 @@
+# drift/sqlite3's web assets are build artifacts copied verbatim from
+# their upstream packages (see lib/data/local_db/database.dart) -- treat
+# as binary so git never rewrites their line endings on checkout, which
+# would make them no longer byte-identical to the shipped release.
+web/drift_worker.js -text
+web/sqlite3.wasm -text

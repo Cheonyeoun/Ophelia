@@ -190,11 +190,11 @@ lib/
 
 A local database being "just SQLite" doesn't mean it's fast by default — these are the concrete practices that keep it production-grade as the library grows:
 
-- **Off the UI thread:** run Drift via a background isolate (`DriftIsolate`/`NativeDatabase.createInBackground`) so no query ever blocks the main thread or causes frame drops during scroll.
+- **Off the UI thread:** run Drift via a background isolate (`DriftIsolate`/`NativeDatabase.createInBackground`) so no query ever blocks the main thread or causes frame drops during scroll. On web, the equivalent is a WebAssembly SQLite build running in a dedicated worker (`sqlite3.wasm` + `drift_worker.js` under `web/`, wired up via `drift_flutter`'s `driftDatabase(..., web: DriftWebOptions(...))`) — same goal, platform-appropriate mechanism.
 - **Deliberate indexing:** index all foreign keys (`playlist_tracks.track_id`, `listening_events.track_id`) and hot filter/sort columns (`listening_events.played_at`). Avoid over-indexing write-heavy tables.
 - **FTS5 for search:** index title/artist/album in an SQLite FTS5 virtual table instead of `LIKE '%query%'` — the difference between instant search and stutter at scale.
 - **Materialized aggregates:** maintain a small `weekly_stats` table updated incrementally, rather than a live `GROUP BY` over all of `listening_events` every time the profile screen opens.
-- **WAL mode:** `PRAGMA journal_mode=WAL` so background writes (listening events) don't block foreground reads (library browsing).
+- **WAL mode:** `PRAGMA journal_mode=WAL` so background writes (listening events) don't block foreground reads (library browsing). Native platforms only — drift's web/wasm backend doesn't support WAL, so this is skipped there.
 - **Batched writes:** buffer and batch-write listening events (e.g. on track completion) in a single transaction, not per playback tick.
 - **No blobs in the DB:** cover art and audio files live on disk; only paths are stored in SQLite. Keeps the DB small, fast to `VACUUM`, and fast to export.
 - **Pagination everywhere:** library/queue views use `LIMIT`/keyset pagination, never load the full track table into memory.
