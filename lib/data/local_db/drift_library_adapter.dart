@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:sqlite3/sqlite3.dart' show SqliteException;
+import 'package:sqlite3/common.dart' show SqliteException;
 
 import '../../core/domain/listening_event.dart' as domain;
 import '../../core/domain/local_library_port.dart';
@@ -16,12 +16,19 @@ import 'database.dart';
 ///
 /// Every method maps real Drift/SQLite exceptions to [StorageFailure] --
 /// [SqliteException] covers constraint violations and most on-disk I/O
-/// problems, and drift's isolate protocol specifically reconstructs that
-/// exception type across the background isolate boundary (see
-/// `database.dart`), so catching it here works whether or not a query
-/// actually ran on this isolate. A missing row is never an exception --
+/// problems, and drift's cross-boundary protocol specifically
+/// reconstructs that exception type on the way back -- across the
+/// background isolate on native, or the web worker on web (see
+/// `database.dart`) -- so catching it here works everywhere regardless of
+/// where the query actually ran. A missing row is never an exception --
 /// it's a plain query result -- so those cases return [NotFoundFailure]
 /// directly instead of relying on a catch clause.
+///
+/// Imports `SqliteException` from `package:sqlite3/common.dart`, not
+/// `package:sqlite3/sqlite3.dart` -- the latter pulls in `dart:ffi`
+/// bindings that don't compile for web at all (`external` members are
+/// only valid there for JS interop), and this file is loaded on every
+/// platform through `providers.dart`.
 class DriftLibraryAdapter implements LocalLibraryPort {
   final OpheliaDatabase _db;
 
