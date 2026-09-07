@@ -40,6 +40,8 @@ dependencies:
   drift: ^2.34.4
   drift_flutter: ^0.3.1
   sqlite3: ^3.5.2
+  just_audio: ^0.10.6
+  audio_service: ^0.18.19
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +68,14 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # A bundled manual-QA track for the real playback engine adapter (see
+  # lib/playback/engine/) -- MediaSourcePort/DownloadPort are still fakes,
+  # so this is the one audio file that's actually real, wired to sample
+  # track t1 (see lib/data/fakes/sample_data.dart) so it plays for real
+  # from the running app.
+  assets:
+    - assets/test_audio/test_track.wav
 
   # To add assets to your application, add an assets section, like this:
   # assets:

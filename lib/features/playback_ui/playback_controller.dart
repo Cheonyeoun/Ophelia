@@ -80,8 +80,39 @@ class _AsyncMutex {
 class PlaybackController extends Notifier<PlaybackUiState> {
   final _mutex = _AsyncMutex();
 
+  /// Guards [_ensurePositionStreamSubscribed] so the engine's
+  /// `positionStream` is subscribed to at most once per controller
+  /// lifetime, the first time anything actually plays -- not eagerly in
+  /// [build], which would touch `playbackEngineProvider` (and, with the
+  /// real adapter, `just_audio`/`audio_service`'s platform channels) just
+  /// from mounting the app, before the user ever presses play.
+  bool _positionStreamSubscribed = false;
+
   @override
   PlaybackUiState build() => PlaybackUiState.initial();
+
+  /// Subscribes once to the engine's continuous position stream (see
+  /// `PlaybackEnginePort.positionStream`), mirroring each update onto
+  /// `PlaybackState.position` — the real-playback equivalent of the
+  /// discrete position snapshots [_play]/[_seekBy]/[_seekTo]/[_skipNext]/
+  /// [_skipPrevious] already set on their own. Deliberately outside
+  /// [_mutex]: this only ever narrows `position`, so there's nothing for
+  /// it to race with, and gating it on the mutex would mean a position
+  /// update queued behind an in-flight seek/skip could momentarily show a
+  /// stale value instead of the engine's actual current one.
+  void _ensurePositionStreamSubscribed() {
+    if (_positionStreamSubscribed) return;
+    _positionStreamSubscribed = true;
+    final subscription = ref
+        .read(playbackEngineProvider)
+        .positionStream
+        .listen((position) {
+      state = state.copyWith(
+        playback: state.playback.copyWith(position: position),
+      );
+    });
+    ref.onDispose(subscription.cancel);
+  }
 
   /// Plays [track]. When [queue] is given, it becomes the active queue —
   /// e.g. the track list a screen played this track from — so
@@ -110,6 +141,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     );
     if (result case ResultFailure()) return;
 
+    _ensurePositionStreamSubscribed();
     state = state.copyWith(
       playback: state.playback.copyWith(
         currentTrack: track,
@@ -155,6 +187,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     if (track == null) return;
     final result = await ref.read(resumeTrackProvider)(track);
     if (result case ResultFailure()) return;
+    _ensurePositionStreamSubscribed();
     state = state.copyWith(isPlaying: true);
   }
 
@@ -174,6 +207,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     final result = await ref.read(skipNextProvider)();
     switch (result) {
       case Success(value: final track):
+        _ensurePositionStreamSubscribed();
         state = state.copyWith(
           playback: state.playback.copyWith(
             currentTrack: track,
@@ -193,6 +227,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     final result = await ref.read(skipPreviousProvider)();
     switch (result) {
       case Success(value: final track):
+        _ensurePositionStreamSubscribed();
         state = state.copyWith(
           playback: state.playback.copyWith(
             currentTrack: track,

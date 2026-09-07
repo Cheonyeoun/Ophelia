@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ophelia/app/layout_metrics.dart';
+import 'package:ophelia/app/providers.dart';
 import 'package:ophelia/app/theme.dart';
+import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
 import 'package:ophelia/features/playback_ui/playback_controller.dart';
 
@@ -21,7 +23,11 @@ void main() {
   test(
     'reserves the mini-player height plus the gap once a track is loaded',
     () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+        ],
+      );
       addTearDown(container.dispose);
 
       await container
@@ -39,7 +45,11 @@ void main() {
     'tracks a newly reported mini-player height rather than staying at '
     'the seed default',
     () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+        ],
+      );
       addTearDown(container.dispose);
 
       await container
