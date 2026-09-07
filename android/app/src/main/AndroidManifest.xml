@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <!-- audio_service: lets playback keep running (and show lock-screen/
-         notification controls) once the app is backgrounded -- see
+         notification controls) once the app is backgrounded; see
          lib/playback/engine/. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
