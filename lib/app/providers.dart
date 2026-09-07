@@ -41,11 +41,11 @@ import '../core/usecases/update_profile.dart';
 import '../data/fakes/fake_download_port.dart';
 import '../data/fakes/fake_export_import_port.dart';
 import '../data/fakes/fake_media_source_port.dart';
-import '../data/fakes/fake_playback_engine_port.dart';
 import '../data/fakes/fake_settings_port.dart';
 import '../data/local_db/database.dart' hide Playlist;
 import '../data/local_db/drift_library_adapter.dart';
 import '../features/settings/settings_state.dart';
+import '../playback/engine/just_audio_playback_adapter.dart';
 
 // Top-level provider wiring / composition root (docs/architecture.md
 // §3.4). Screens call use cases through these providers — never
@@ -54,11 +54,14 @@ import '../features/settings/settings_state.dart';
 //
 // Most port providers below still wire in the fakes from lib/data/fakes/
 // — temporary, UI-development-only stand-ins (see that folder's doc
-// comments) — until their real adapters exist. `localLibraryProvider` is
-// the first exception: it's backed by the real `DriftLibraryAdapter`
-// (lib/data/local_db/) now. Widget tests that want the fake's predictable
-// sample data instead must override it explicitly in their `ProviderScope`
-// with `FakeLocalLibraryPort()`.
+// comments) — until their real adapters exist. `localLibraryProvider` and
+// `playbackEngineProvider` are the exceptions: they're backed by the real
+// `DriftLibraryAdapter` (lib/data/local_db/) and `JustAudioPlaybackAdapter`
+// (lib/playback/engine/) now. Widget/unit tests that want a fake's
+// predictable, hardware-free behavior instead must override the
+// corresponding provider explicitly (in a `ProviderScope`'s `overrides`,
+// or a `ProviderContainer`'s) with `FakeLocalLibraryPort()`/
+// `FakePlaybackEnginePort()`.
 
 final mediaSourceProvider = Provider<MediaSourcePort>(
   (ref) => FakeMediaSourcePort(),
@@ -82,7 +85,10 @@ final downloadPortProvider = Provider<DownloadPort>(
 );
 
 final playbackEngineProvider = Provider<PlaybackEnginePort>(
-  (ref) => FakePlaybackEnginePort(),
+  (ref) => JustAudioPlaybackAdapter(
+    mediaSource: ref.watch(mediaSourceProvider),
+    downloads: ref.watch(downloadPortProvider),
+  ),
 );
 
 final exportImportProvider = Provider<ExportImportPort>(

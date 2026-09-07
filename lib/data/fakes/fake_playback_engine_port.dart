@@ -51,6 +51,13 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   @override
   int currentIndex = -1;
 
+  /// Never emits -- this fake has no real, continuously-advancing
+  /// position to report (see the class doc comment); `position` above is
+  /// only ever set at discrete moments (play/seek/skip), same as before
+  /// this getter existed.
+  @override
+  Stream<Duration> get positionStream => const Stream.empty();
+
   /// Indices already visited during the current shuffle "round", in
   /// order, with [currentIndex] always last — lets skipPrevious undo a
   /// shuffle pick instead of drawing a fresh random one.

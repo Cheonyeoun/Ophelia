@@ -89,4 +89,13 @@ abstract interface class PlaybackEnginePort {
   /// `PlaybackState.currentIndex` so the presentation layer can highlight
   /// by position instead of matching queue entries by value.
   int get currentIndex;
+
+  /// A continuous stream of the current track's playback position while
+  /// it's actually playing (no events while paused/stalled — matches
+  /// `just_audio`'s own `AudioPlayer.positionStream` contract, which a
+  /// real adapter forwards directly). `PlaybackController` listens to
+  /// this to keep `PlaybackState.position` live during playback, the
+  /// continuous-time counterpart to the discrete position snapshots
+  /// `play`/`seek`/`skipNext`/`skipPrevious` already produce on their own.
+  Stream<Duration> get positionStream;
 }

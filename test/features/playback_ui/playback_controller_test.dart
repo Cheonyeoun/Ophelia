@@ -80,6 +80,9 @@ class _GatedEngine implements PlaybackEnginePort {
 
   @override
   int get currentIndex => inner.currentIndex;
+
+  @override
+  Stream<Duration> get positionStream => inner.positionStream;
 }
 
 /// Covers the fix for rapid double-taps on shuffle/repeat: each tap must
@@ -93,7 +96,11 @@ void main() {
     'two rapid shuffle taps each toggle from the other\'s result, landing '
     'back on the original value',
     () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+        ],
+      );
       addTearDown(container.dispose);
       final controller = container.read(playbackControllerProvider.notifier);
       await controller.play(sampleTracks.first);
@@ -120,7 +127,11 @@ void main() {
     'two rapid repeat-mode taps each advance the cycle once, not twice '
     'from the same value',
     () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+        ],
+      );
       addTearDown(container.dispose);
       final controller = container.read(playbackControllerProvider.notifier);
       await controller.play(sampleTracks.first);
@@ -229,7 +240,11 @@ void main() {
     test(
       'seekBy never pushes position below zero',
       () async {
-        final container = ProviderContainer();
+        final container = ProviderContainer(
+          overrides: [
+            playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+          ],
+        );
         addTearDown(container.dispose);
         final controller = container.read(
           playbackControllerProvider.notifier,
@@ -248,7 +263,11 @@ void main() {
     test(
       'seekTo clamps an out-of-range target to within [0, duration]',
       () async {
-        final container = ProviderContainer();
+        final container = ProviderContainer(
+          overrides: [
+            playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+          ],
+        );
         addTearDown(container.dispose);
         final controller = container.read(
           playbackControllerProvider.notifier,

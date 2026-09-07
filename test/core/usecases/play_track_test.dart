@@ -79,6 +79,9 @@ class _PlayFailingEngine implements PlaybackEnginePort {
 
   @override
   int get currentIndex => inner.currentIndex;
+
+  @override
+  Stream<Duration> get positionStream => inner.positionStream;
 }
 
 void main() {

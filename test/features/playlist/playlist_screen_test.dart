@@ -10,6 +10,7 @@ import 'package:ophelia/core/domain/user_profile.dart';
 import 'package:ophelia/core/error/failure.dart';
 import 'package:ophelia/core/error/result.dart';
 import 'package:ophelia/data/fakes/fake_local_library_port.dart';
+import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/features/playback_ui/playback_controller.dart';
 import 'package:ophelia/main.dart';
 
@@ -64,6 +65,7 @@ void main() {
       ProviderScope(
         overrides: [
           localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
         ],
         child: const OpheliaApp(),
       ),
