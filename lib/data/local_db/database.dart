@@ -12,7 +12,15 @@ part 'database.g.dart';
 /// now, only ever read/written as placeholders by [DriftLibraryAdapter] --
 /// see tables.dart's doc comment.
 @DriftDatabase(
-  tables: [Playlists, PlaylistTracks, CachedTracks, ListeningEvents, Profile, Downloads],
+  tables: [
+    Playlists,
+    PlaylistTracks,
+    CachedTracks,
+    ListeningEvents,
+    Profile,
+    Downloads,
+    LinkedFolders,
+  ],
 )
 class OpheliaDatabase extends _$OpheliaDatabase {
   /// [executor] is overridable so tests can pass an in-memory
@@ -52,11 +60,22 @@ class OpheliaDatabase extends _$OpheliaDatabase {
       );
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          // v1 -> v2: added `linked_folders` (local_file_source feature) --
+          // an existing install's database file predates this table, and
+          // `onCreate` only ever runs for a brand-new file, so without this
+          // step every `LocalFileSourceAdapter` call would hit a real
+          // "no such table" error on any device that already had the app
+          // installed before this table existed.
+          if (from < 2) {
+            await m.createTable(linkedFolders);
+          }
+        },
         beforeOpen: (details) async {
           // SQLite disables foreign key enforcement by default; without
           // this, every `.references()` constraint in tables.dart

@@ -5,6 +5,7 @@ import 'package:ophelia/app/providers.dart';
 import 'package:ophelia/app/router.dart';
 import 'package:ophelia/app/widgets/bottom_nav_bar.dart';
 import 'package:ophelia/app/widgets/mini_player_bar.dart';
+import 'package:ophelia/data/fakes/fake_local_file_source_port.dart';
 import 'package:ophelia/data/fakes/fake_local_library_port.dart';
 import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
@@ -21,6 +22,9 @@ void main() {
         overrides: [
           localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
           playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+          localFileSourceProvider.overrideWithValue(
+            FakeLocalFileSourcePort(),
+          ),
         ],
         child: const OpheliaApp(),
       ),

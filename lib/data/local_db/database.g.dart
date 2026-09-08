@@ -2006,6 +2006,218 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
   }
 }
 
+class $LinkedFoldersTable extends LinkedFolders
+    with TableInfo<$LinkedFoldersTable, LinkedFolder> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LinkedFoldersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _linkedAtMeta = const VerificationMeta(
+    'linkedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> linkedAt = GeneratedColumn<DateTime>(
+    'linked_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [path, linkedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'linked_folders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LinkedFolder> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('linked_at')) {
+      context.handle(
+        _linkedAtMeta,
+        linkedAt.isAcceptableOrUnknown(data['linked_at']!, _linkedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_linkedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {path};
+  @override
+  LinkedFolder map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LinkedFolder(
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      linkedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}linked_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LinkedFoldersTable createAlias(String alias) {
+    return $LinkedFoldersTable(attachedDatabase, alias);
+  }
+}
+
+class LinkedFolder extends DataClass implements Insertable<LinkedFolder> {
+  final String path;
+  final DateTime linkedAt;
+  const LinkedFolder({required this.path, required this.linkedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['path'] = Variable<String>(path);
+    map['linked_at'] = Variable<DateTime>(linkedAt);
+    return map;
+  }
+
+  LinkedFoldersCompanion toCompanion(bool nullToAbsent) {
+    return LinkedFoldersCompanion(path: Value(path), linkedAt: Value(linkedAt));
+  }
+
+  factory LinkedFolder.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LinkedFolder(
+      path: serializer.fromJson<String>(json['path']),
+      linkedAt: serializer.fromJson<DateTime>(json['linkedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'path': serializer.toJson<String>(path),
+      'linkedAt': serializer.toJson<DateTime>(linkedAt),
+    };
+  }
+
+  LinkedFolder copyWith({String? path, DateTime? linkedAt}) => LinkedFolder(
+    path: path ?? this.path,
+    linkedAt: linkedAt ?? this.linkedAt,
+  );
+  LinkedFolder copyWithCompanion(LinkedFoldersCompanion data) {
+    return LinkedFolder(
+      path: data.path.present ? data.path.value : this.path,
+      linkedAt: data.linkedAt.present ? data.linkedAt.value : this.linkedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LinkedFolder(')
+          ..write('path: $path, ')
+          ..write('linkedAt: $linkedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(path, linkedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LinkedFolder &&
+          other.path == this.path &&
+          other.linkedAt == this.linkedAt);
+}
+
+class LinkedFoldersCompanion extends UpdateCompanion<LinkedFolder> {
+  final Value<String> path;
+  final Value<DateTime> linkedAt;
+  final Value<int> rowid;
+  const LinkedFoldersCompanion({
+    this.path = const Value.absent(),
+    this.linkedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LinkedFoldersCompanion.insert({
+    required String path,
+    required DateTime linkedAt,
+    this.rowid = const Value.absent(),
+  }) : path = Value(path),
+       linkedAt = Value(linkedAt);
+  static Insertable<LinkedFolder> custom({
+    Expression<String>? path,
+    Expression<DateTime>? linkedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (path != null) 'path': path,
+      if (linkedAt != null) 'linked_at': linkedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LinkedFoldersCompanion copyWith({
+    Value<String>? path,
+    Value<DateTime>? linkedAt,
+    Value<int>? rowid,
+  }) {
+    return LinkedFoldersCompanion(
+      path: path ?? this.path,
+      linkedAt: linkedAt ?? this.linkedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (linkedAt.present) {
+      map['linked_at'] = Variable<DateTime>(linkedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LinkedFoldersCompanion(')
+          ..write('path: $path, ')
+          ..write('linkedAt: $linkedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$OpheliaDatabase extends GeneratedDatabase {
   _$OpheliaDatabase(QueryExecutor e) : super(e);
   $OpheliaDatabaseManager get managers => $OpheliaDatabaseManager(this);
@@ -2017,6 +2229,7 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
   );
   late final $ProfileTable profile = $ProfileTable(this);
   late final $DownloadsTable downloads = $DownloadsTable(this);
+  late final $LinkedFoldersTable linkedFolders = $LinkedFoldersTable(this);
   late final Index playlistTracksTrackId = Index(
     'playlist_tracks_track_id',
     'CREATE INDEX playlist_tracks_track_id ON playlist_tracks (track_id)',
@@ -2040,6 +2253,7 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
     listeningEvents,
     profile,
     downloads,
+    linkedFolders,
     playlistTracksTrackId,
     listeningEventsTrackId,
     listeningEventsPlayedAt,
@@ -4045,6 +4259,155 @@ typedef $$DownloadsTableProcessedTableManager =
       Download,
       PrefetchHooks Function({bool trackId})
     >;
+typedef $$LinkedFoldersTableCreateCompanionBuilder =
+    LinkedFoldersCompanion Function({
+      required String path,
+      required DateTime linkedAt,
+      Value<int> rowid,
+    });
+typedef $$LinkedFoldersTableUpdateCompanionBuilder =
+    LinkedFoldersCompanion Function({
+      Value<String> path,
+      Value<DateTime> linkedAt,
+      Value<int> rowid,
+    });
+
+class $$LinkedFoldersTableFilterComposer
+    extends Composer<_$OpheliaDatabase, $LinkedFoldersTable> {
+  $$LinkedFoldersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get linkedAt => $composableBuilder(
+    column: $table.linkedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LinkedFoldersTableOrderingComposer
+    extends Composer<_$OpheliaDatabase, $LinkedFoldersTable> {
+  $$LinkedFoldersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get linkedAt => $composableBuilder(
+    column: $table.linkedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LinkedFoldersTableAnnotationComposer
+    extends Composer<_$OpheliaDatabase, $LinkedFoldersTable> {
+  $$LinkedFoldersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get linkedAt =>
+      $composableBuilder(column: $table.linkedAt, builder: (column) => column);
+}
+
+class $$LinkedFoldersTableTableManager
+    extends
+        RootTableManager<
+          _$OpheliaDatabase,
+          $LinkedFoldersTable,
+          LinkedFolder,
+          $$LinkedFoldersTableFilterComposer,
+          $$LinkedFoldersTableOrderingComposer,
+          $$LinkedFoldersTableAnnotationComposer,
+          $$LinkedFoldersTableCreateCompanionBuilder,
+          $$LinkedFoldersTableUpdateCompanionBuilder,
+          (
+            LinkedFolder,
+            BaseReferences<
+              _$OpheliaDatabase,
+              $LinkedFoldersTable,
+              LinkedFolder
+            >,
+          ),
+          LinkedFolder,
+          PrefetchHooks Function()
+        > {
+  $$LinkedFoldersTableTableManager(
+    _$OpheliaDatabase db,
+    $LinkedFoldersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LinkedFoldersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LinkedFoldersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LinkedFoldersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> path = const Value.absent(),
+                Value<DateTime> linkedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LinkedFoldersCompanion(
+                path: path,
+                linkedAt: linkedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String path,
+                required DateTime linkedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => LinkedFoldersCompanion.insert(
+                path: path,
+                linkedAt: linkedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LinkedFoldersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OpheliaDatabase,
+      $LinkedFoldersTable,
+      LinkedFolder,
+      $$LinkedFoldersTableFilterComposer,
+      $$LinkedFoldersTableOrderingComposer,
+      $$LinkedFoldersTableAnnotationComposer,
+      $$LinkedFoldersTableCreateCompanionBuilder,
+      $$LinkedFoldersTableUpdateCompanionBuilder,
+      (
+        LinkedFolder,
+        BaseReferences<_$OpheliaDatabase, $LinkedFoldersTable, LinkedFolder>,
+      ),
+      LinkedFolder,
+      PrefetchHooks Function()
+    >;
 
 class $OpheliaDatabaseManager {
   final _$OpheliaDatabase _db;
@@ -4061,4 +4424,6 @@ class $OpheliaDatabaseManager {
       $$ProfileTableTableManager(_db, _db.profile);
   $$DownloadsTableTableManager get downloads =>
       $$DownloadsTableTableManager(_db, _db.downloads);
+  $$LinkedFoldersTableTableManager get linkedFolders =>
+      $$LinkedFoldersTableTableManager(_db, _db.linkedFolders);
 }

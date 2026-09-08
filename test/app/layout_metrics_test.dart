@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ophelia/app/layout_metrics.dart';
 import 'package:ophelia/app/providers.dart';
 import 'package:ophelia/app/theme.dart';
+import 'package:ophelia/data/fakes/fake_local_file_source_port.dart';
 import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
 import 'package:ophelia/features/playback_ui/playback_controller.dart';
@@ -26,6 +27,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+          localFileSourceProvider.overrideWithValue(
+            FakeLocalFileSourcePort(),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -48,6 +52,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+          localFileSourceProvider.overrideWithValue(
+            FakeLocalFileSourcePort(),
+          ),
         ],
       );
       addTearDown(container.dispose);

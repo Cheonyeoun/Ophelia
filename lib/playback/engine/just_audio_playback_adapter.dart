@@ -1,6 +1,8 @@
 import 'package:audio_service/audio_service.dart';
+import 'package:meta/meta.dart';
 
 import '../../core/domain/download_port.dart';
+import '../../core/domain/local_file_source_port.dart';
 import '../../core/domain/media_source_port.dart';
 import '../../core/domain/playback_engine_port.dart';
 import '../../core/domain/playback_state.dart';
@@ -34,23 +36,27 @@ import 'ophelia_audio_handler.dart';
 class JustAudioPlaybackAdapter implements PlaybackEnginePort {
   final MediaSourcePort _mediaSource;
   final DownloadPort _downloads;
+  final LocalFileSourcePort _localFileSource;
 
   Future<OpheliaAudioHandler>? _handlerFuture;
   OpheliaAudioHandler? _resolvedHandler;
 
-  // Parameter names stay public (mediaSource/downloads) while the fields
-  // they populate stay private -- an initializing formal would force
-  // them to share the field's leading-underscore name, which external
-  // callers (e.g. providers.dart) couldn't pass as a named argument.
+  // Parameter names stay public (mediaSource/downloads/localFileSource)
+  // while the fields they populate stay private -- an initializing
+  // formal would force them to share the field's leading-underscore
+  // name, which external callers (e.g. providers.dart) couldn't pass as
+  // a named argument.
   JustAudioPlaybackAdapter({
     required MediaSourcePort mediaSource,
     required DownloadPort downloads,
+    required LocalFileSourcePort localFileSource,
   })  : _mediaSource = mediaSource, // ignore: prefer_initializing_formals
-        _downloads = downloads; // ignore: prefer_initializing_formals
+        _downloads = downloads, // ignore: prefer_initializing_formals
+        _localFileSource = localFileSource; // ignore: prefer_initializing_formals
 
   Future<OpheliaAudioHandler> get _handler {
     return _handlerFuture ??= AudioService.init(
-      builder: () => OpheliaAudioHandler(resolveSource: _resolveSource),
+      builder: () => OpheliaAudioHandler(resolveSource: resolveSource),
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'com.ophelia.ophelia.channel.audio',
         androidNotificationChannelName: 'Ophelia playback',
@@ -61,13 +67,32 @@ class JustAudioPlaybackAdapter implements PlaybackEnginePort {
     });
   }
 
-  /// The same download-first, stream-fallback resolution `PlayTrack` does
-  /// for the very first track of a session (see core/usecases/
-  /// play_track.dart) — needed here too because [OpheliaAudioHandler]'s
-  /// `skipNext`/`skipPrevious` pick a track the caller couldn't have
-  /// predicted (especially under shuffle) and so can't pass a source path
-  /// in for, unlike the initial [play] call.
-  Future<Result<String, Failure>> _resolveSource(Track track) async {
+  /// Resolves whatever source a track the *engine itself* picked needs --
+  /// [OpheliaAudioHandler]'s `skipNext`/`skipPrevious` land on a track the
+  /// caller couldn't have predicted (especially under shuffle), so unlike
+  /// the initial [play] call, there's no source path to pass in for it.
+  ///
+  /// Mirrors `PlayTrack`'s own source resolution for the very first track
+  /// of a session (see core/usecases/play_track.dart) exactly, branch for
+  /// branch: a local-folder track (`sourceType: TrackSourceType.local`)
+  /// resolves via [LocalFileSourcePort] and never touches
+  /// download/stream at all; anything else keeps the download-first,
+  /// stream-fallback flow. The two must stay in sync -- this was missed
+  /// entirely when local-folder support was added, which silently broke
+  /// skip-next/previous for a local track (it fell through to
+  /// `DownloadPort`/`MediaSourcePort`, which don't recognize a `local:`
+  /// id and fail) until this fix.
+  ///
+  /// `@visibleForTesting`: pure port-delegation with no `AudioService`/
+  /// `just_audio` involved, so -- unlike almost everything else on this
+  /// class -- it's safe to call directly from a plain `flutter test`, no
+  /// native platform plugin required. See this class's own test file.
+  @visibleForTesting
+  Future<Result<String, Failure>> resolveSource(Track track) async {
+    if (track.sourceType == TrackSourceType.local) {
+      return _localFileSource.getSourcePath(track.id);
+    }
+
     final downloadedResult = await _downloads.isDownloaded(track.id);
     final bool isDownloaded;
     switch (downloadedResult) {

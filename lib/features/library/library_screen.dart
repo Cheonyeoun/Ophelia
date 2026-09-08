@@ -38,6 +38,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   child: Text('Library', style: frauncesStyle(fontSize: 16)),
                 ),
                 IconButton(
+                  icon: const Icon(Icons.folder_outlined, size: 18),
+                  color: AppColors.paleDim,
+                  tooltip: 'Local Files',
+                  onPressed: () => context.push('/local-files'),
+                ),
+                IconButton(
                   icon: const Icon(Icons.download_outlined, size: 18),
                   color: AppColors.paleDim,
                   tooltip: 'Downloads',
