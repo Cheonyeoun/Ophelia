@@ -98,3 +98,24 @@ class Downloads extends Table {
   @override
   Set<Column> get primaryKey => {trackId};
 }
+
+/// A device folder the user has linked as a local music source -- not
+/// written by [DriftLibraryAdapter] either, but by `LocalFileSourceAdapter`
+/// (lib/data/local_files/), which implements the separate
+/// `LocalFileSourcePort` yet shares this same database for exactly this
+/// one small piece of bookkeeping (see that port's own doc comment for
+/// why it's a separate port/adapter rather than folded into
+/// `LocalLibraryPort`).
+///
+/// [path] is whatever the platform's folder picker returned: a plain
+/// filesystem path on desktop, or Android's best-effort path resolved
+/// from a SAF tree URI -- see `LocalFileSourceAdapter.pickFolder`'s doc
+/// comment for why this is *not* a persisted `content://` URI, and what
+/// that means for surviving app restarts.
+class LinkedFolders extends Table {
+  TextColumn get path => text()();
+  DateTimeColumn get linkedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {path};
+}

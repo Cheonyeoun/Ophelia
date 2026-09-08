@@ -3,7 +3,6 @@ import '../../core/domain/listening_event.dart';
 import '../../core/domain/playlist.dart';
 import '../../core/domain/track.dart';
 import '../../core/domain/user_profile.dart';
-import '../../playback/engine/ophelia_audio_handler.dart' show assetSourcePrefix;
 
 /// Sample data shared by every fake in lib/data/fakes/, matching the
 /// visual mockups under docs/design/ so the app has believable content to
@@ -71,16 +70,9 @@ const sampleUserProfile = UserProfile(
 );
 
 final sampleDownloadRecords = <DownloadRecord>[
-  // t1's path deliberately points at the real bundled manual-QA test
-  // asset (assets/test_audio/, registered in pubspec.yaml) instead of a
-  // fake, non-existent path like the others below -- MediaSourcePort and
-  // DownloadPort are still fakes, so this is the one track that actually
-  // produces real, audible sound through the real JustAudioPlaybackAdapter
-  // (lib/playback/engine/) when played from the running app. See that
-  // adapter's tests for the 'asset:' prefix convention this relies on.
   DownloadRecord(
     trackId: 't1',
-    localPath: '${assetSourcePrefix}assets/test_audio/test_track.wav',
+    localPath: '/downloads/t1.mp3',
     sizeBytes: 8400000,
     downloadedAt: DateTime(2026, 8, 20),
   ),

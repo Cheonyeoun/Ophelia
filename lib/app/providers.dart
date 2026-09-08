@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/domain/download_port.dart';
 import '../core/domain/export_import_port.dart';
+import '../core/domain/local_file_source_port.dart';
 import '../core/domain/local_library_port.dart';
 import '../core/domain/media_source_port.dart';
 import '../core/domain/playback_engine_port.dart';
@@ -18,12 +19,14 @@ import '../core/usecases/export_library.dart';
 import '../core/usecases/get_artist_tracks.dart';
 import '../core/usecases/get_playlist_tracks.dart';
 import '../core/usecases/import_library.dart';
+import '../core/usecases/link_folder.dart';
 import '../core/usecases/listening_session.dart';
 import '../core/usecases/pause_track.dart';
 import '../core/usecases/play_track.dart';
 import '../core/usecases/remove_download.dart';
 import '../core/usecases/resume_track.dart';
 import '../core/usecases/save_playlist.dart';
+import '../core/usecases/scan_local_folder.dart';
 import '../core/usecases/search_catalog.dart';
 import '../core/usecases/seek_by.dart';
 import '../core/usecases/seek_to.dart';
@@ -37,6 +40,7 @@ import '../core/usecases/toggle_immersive.dart';
 import '../core/usecases/toggle_repeat_mode.dart';
 import '../core/usecases/toggle_shuffle.dart';
 import '../core/usecases/toggle_wifi_only_downloads.dart';
+import '../core/usecases/unlink_folder.dart';
 import '../core/usecases/update_profile.dart';
 import '../data/fakes/fake_download_port.dart';
 import '../data/fakes/fake_export_import_port.dart';
@@ -44,6 +48,7 @@ import '../data/fakes/fake_media_source_port.dart';
 import '../data/fakes/fake_settings_port.dart';
 import '../data/local_db/database.dart' hide Playlist;
 import '../data/local_db/drift_library_adapter.dart';
+import '../data/local_files/local_file_source_adapter.dart';
 import '../features/settings/settings_state.dart';
 import '../playback/engine/just_audio_playback_adapter.dart';
 
@@ -54,14 +59,16 @@ import '../playback/engine/just_audio_playback_adapter.dart';
 //
 // Most port providers below still wire in the fakes from lib/data/fakes/
 // — temporary, UI-development-only stand-ins (see that folder's doc
-// comments) — until their real adapters exist. `localLibraryProvider` and
-// `playbackEngineProvider` are the exceptions: they're backed by the real
-// `DriftLibraryAdapter` (lib/data/local_db/) and `JustAudioPlaybackAdapter`
-// (lib/playback/engine/) now. Widget/unit tests that want a fake's
-// predictable, hardware-free behavior instead must override the
-// corresponding provider explicitly (in a `ProviderScope`'s `overrides`,
-// or a `ProviderContainer`'s) with `FakeLocalLibraryPort()`/
-// `FakePlaybackEnginePort()`.
+// comments) — until their real adapters exist. `localLibraryProvider`,
+// `playbackEngineProvider`, and `localFileSourceProvider` are the
+// exceptions: they're backed by the real `DriftLibraryAdapter`
+// (lib/data/local_db/), `JustAudioPlaybackAdapter` (lib/playback/engine/),
+// and `LocalFileSourceAdapter` (lib/data/local_files/) now. Widget/unit
+// tests that want a fake's predictable, hardware-free behavior instead
+// must override the corresponding provider explicitly (in a
+// `ProviderScope`'s `overrides`, or a `ProviderContainer`'s) with
+// `FakeLocalLibraryPort()`/`FakePlaybackEnginePort()`/
+// `FakeLocalFileSourcePort()`.
 
 final mediaSourceProvider = Provider<MediaSourcePort>(
   (ref) => FakeMediaSourcePort(),
@@ -84,10 +91,19 @@ final downloadPortProvider = Provider<DownloadPort>(
   (ref) => FakeDownloadPort(),
 );
 
+/// Backed by the real `LocalFileSourceAdapter` (lib/data/local_files/) --
+/// see its own doc comment for the real, platform-specific limitations
+/// this carries today (Android SAF path persistence, iOS per-file
+/// picking, no web support).
+final localFileSourceProvider = Provider<LocalFileSourcePort>(
+  (ref) => LocalFileSourceAdapter(ref.watch(opheliaDatabaseProvider)),
+);
+
 final playbackEngineProvider = Provider<PlaybackEnginePort>(
   (ref) => JustAudioPlaybackAdapter(
     mediaSource: ref.watch(mediaSourceProvider),
     downloads: ref.watch(downloadPortProvider),
+    localFileSource: ref.watch(localFileSourceProvider),
   ),
 );
 
@@ -111,6 +127,7 @@ final playTrackProvider = Provider<PlayTrack>(
     ref.watch(playbackEngineProvider),
     ref.watch(mediaSourceProvider),
     ref.watch(downloadPortProvider),
+    ref.watch(localFileSourceProvider),
     ref.watch(listeningSessionProvider),
   ),
 );
@@ -242,6 +259,18 @@ final updateProfileProvider = Provider<UpdateProfile>(
   (ref) => UpdateProfile(ref.watch(localLibraryProvider)),
 );
 
+final linkFolderProvider = Provider<LinkFolder>(
+  (ref) => LinkFolder(ref.watch(localFileSourceProvider)),
+);
+
+final unlinkFolderProvider = Provider<UnlinkFolder>(
+  (ref) => UnlinkFolder(ref.watch(localFileSourceProvider)),
+);
+
+final scanLocalFolderProvider = Provider<ScanLocalFolder>(
+  (ref) => ScanLocalFolder(ref.watch(localFileSourceProvider)),
+);
+
 // ---------------------------------------------------------------------
 // Read-only view data for screens, derived from the use cases above.
 // There's no dedicated "recently played" or "all tracks" use case, so
@@ -340,6 +369,34 @@ final downloadedTracksProvider = FutureProvider<List<Track>>((ref) async {
     }
   }
   return downloaded;
+});
+
+/// Every linked local folder's path/URI, for the Local Files screen. A
+/// [ResultFailure] is swallowed to an empty list rather than surfaced --
+/// same reasoning as [playlistsProvider]: nothing the screen shows makes
+/// "the folder list itself failed to load" distinguishable from "no
+/// folders linked yet" today, and an empty list is the safer default.
+final linkedFoldersProvider = FutureProvider<List<String>>((ref) async {
+  final result = await ref.watch(localFileSourceProvider).getLinkedFolders();
+  return switch (result) {
+    Success(value: final folders) => folders,
+    ResultFailure() => const [],
+  };
+});
+
+/// [pathOrUri]'s tracks, for the Local Files screen to display and play
+/// from. Re-scans the folder live on every read rather than caching --
+/// see `LocalFileSourceAdapter`'s doc comment on why nothing here
+/// persists a separate track registry.
+final localFolderTracksProvider = FutureProvider.family<List<Track>, String>((
+  ref,
+  pathOrUri,
+) async {
+  final result = await ref.watch(scanLocalFolderProvider)(pathOrUri);
+  return switch (result) {
+    Success(value: final tracks) => tracks,
+    ResultFailure() => const [],
+  };
 });
 
 /// The top tracks by play count over the last 7 days, resolved from

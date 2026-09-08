@@ -9,6 +9,7 @@ import 'package:ophelia/core/domain/playback_state.dart';
 import 'package:ophelia/core/domain/track.dart';
 import 'package:ophelia/core/error/failure.dart';
 import 'package:ophelia/core/error/result.dart';
+import 'package:ophelia/data/fakes/fake_local_file_source_port.dart';
 import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
 import 'package:ophelia/features/playback_ui/playback_controller.dart';
@@ -99,6 +100,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+          localFileSourceProvider.overrideWithValue(
+            FakeLocalFileSourcePort(),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -130,6 +134,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+          localFileSourceProvider.overrideWithValue(
+            FakeLocalFileSourcePort(),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -166,7 +173,12 @@ void main() {
         callOrder,
       );
       final container = ProviderContainer(
-        overrides: [playbackEngineProvider.overrideWithValue(gatedEngine)],
+        overrides: [
+          playbackEngineProvider.overrideWithValue(gatedEngine),
+          localFileSourceProvider.overrideWithValue(
+            FakeLocalFileSourcePort(),
+          ),
+        ],
       );
       addTearDown(container.dispose);
       final controller = container.read(playbackControllerProvider.notifier);
@@ -209,7 +221,12 @@ void main() {
       () async {
         final engine = FakePlaybackEnginePort();
         final container = ProviderContainer(
-          overrides: [playbackEngineProvider.overrideWithValue(engine)],
+          overrides: [
+            playbackEngineProvider.overrideWithValue(engine),
+            localFileSourceProvider.overrideWithValue(
+              FakeLocalFileSourcePort(),
+            ),
+          ],
         );
         addTearDown(container.dispose);
         final controller = container.read(
@@ -243,6 +260,9 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+            localFileSourceProvider.overrideWithValue(
+              FakeLocalFileSourcePort(),
+            ),
           ],
         );
         addTearDown(container.dispose);
@@ -266,6 +286,9 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
+            localFileSourceProvider.overrideWithValue(
+              FakeLocalFileSourcePort(),
+            ),
           ],
         );
         addTearDown(container.dispose);

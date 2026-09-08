@@ -7,6 +7,7 @@ import 'package:ophelia/core/error/result.dart';
 import 'package:ophelia/core/usecases/listening_session.dart';
 import 'package:ophelia/core/usecases/play_track.dart';
 import 'package:ophelia/data/fakes/fake_download_port.dart';
+import 'package:ophelia/data/fakes/fake_local_file_source_port.dart';
 import 'package:ophelia/data/fakes/fake_media_source_port.dart';
 import 'package:ophelia/data/fakes/fake_playback_engine_port.dart';
 import 'package:ophelia/data/fakes/sample_data.dart';
@@ -88,6 +89,7 @@ void main() {
   late FakePlaybackEnginePort playback;
   late FakeMediaSourcePort mediaSource;
   late FakeDownloadPort downloads;
+  late FakeLocalFileSourcePort localFileSource;
   late ListeningSession session;
   late PlayTrack playTrack;
 
@@ -95,8 +97,15 @@ void main() {
     playback = FakePlaybackEnginePort();
     mediaSource = FakeMediaSourcePort();
     downloads = FakeDownloadPort(seed: []);
+    localFileSource = FakeLocalFileSourcePort();
     session = ListeningSession();
-    playTrack = PlayTrack(playback, mediaSource, downloads, session);
+    playTrack = PlayTrack(
+      playback,
+      mediaSource,
+      downloads,
+      localFileSource,
+      session,
+    );
   });
 
   test('plays a downloaded track from its local path', () async {
@@ -166,6 +175,7 @@ void main() {
         playback,
         failingSourceMediaSource,
         downloads,
+        localFileSource,
         session,
       );
       final priorQueue = [sampleTracks[3], sampleTracks[4]];
@@ -202,6 +212,7 @@ void main() {
         failingEngine,
         mediaSource,
         downloads,
+        localFileSource,
         session,
       );
 
@@ -239,6 +250,7 @@ void main() {
         failingEngine,
         mediaSource,
         downloads,
+        localFileSource,
         session,
       );
 
@@ -275,4 +287,56 @@ void main() {
       expect(failure, isA<NotFoundFailure>());
     },
   );
+
+  group('a local track (sourceType: local)', () {
+    test(
+      'is sourced via LocalFileSourcePort, never DownloadPort/'
+      'MediaSourcePort -- a local track was never downloaded or streamed '
+      'from the catalog in the first place',
+      () async {
+        final track = Track(
+          id: 'local:/music/song.mp3',
+          title: 'Song',
+          artist: 'Someone',
+          album: 'Some Folder',
+          durationMs: 1000,
+          sourceType: TrackSourceType.local,
+        );
+        localFileSource = FakeLocalFileSourcePort(
+          tracksByFolder: {'/music': [track]},
+        );
+        playTrack = PlayTrack(
+          playback,
+          mediaSource,
+          downloads,
+          localFileSource,
+          session,
+        );
+
+        unwrapValue(await playTrack(track));
+
+        expect(playback.currentTrack, track);
+        expect(playback.currentSourcePath, '/fake-local/${track.id}');
+      },
+    );
+
+    test(
+      'propagates a NotFoundFailure when LocalFileSourcePort does not '
+      'recognize the track\'s id',
+      () async {
+        const track = Track(
+          id: 'local:/music/missing.mp3',
+          title: 'Missing',
+          artist: 'Nobody',
+          album: 'Nowhere',
+          durationMs: 1000,
+          sourceType: TrackSourceType.local,
+        );
+
+        final failure = unwrapFailure(await playTrack(track));
+
+        expect(failure, isA<NotFoundFailure>());
+      },
+    );
+  });
 }

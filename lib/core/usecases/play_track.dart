@@ -1,4 +1,5 @@
 import '../domain/download_port.dart';
+import '../domain/local_file_source_port.dart';
 import '../domain/media_source_port.dart';
 import '../domain/playback_engine_port.dart';
 import '../domain/track.dart';
@@ -9,6 +10,11 @@ import 'listening_session.dart';
 /// Plays [track] from its local copy if downloaded, otherwise streams it —
 /// the "download-first, stream-fallback" flow (docs/architecture.md
 /// §3.2) — then starts tracking its listening time.
+///
+/// A track from a linked local folder (`sourceType: TrackSourceType.local`
+/// — see local_file_source_port.dart) skips that flow entirely: it isn't
+/// downloaded or streamed from the catalog at all, so its source is
+/// resolved via [localFileSource] instead.
 ///
 /// When [queue] is given, it becomes the engine's active queue — e.g. the
 /// track list the caller played this track from — so skipNext/
@@ -41,27 +47,25 @@ class PlayTrack {
   final PlaybackEnginePort playback;
   final MediaSourcePort mediaSource;
   final DownloadPort downloads;
+  final LocalFileSourcePort localFileSource;
   final ListeningSession session;
 
-  PlayTrack(this.playback, this.mediaSource, this.downloads, this.session);
+  PlayTrack(
+    this.playback,
+    this.mediaSource,
+    this.downloads,
+    this.localFileSource,
+    this.session,
+  );
 
   Future<Result<void, Failure>> call(
     Track track, {
     List<Track>? queue,
     int queueIndex = 0,
   }) async {
-    final isDownloadedResult = await downloads.isDownloaded(track.id);
-    final bool isDownloaded;
-    switch (isDownloadedResult) {
-      case Success(value: final v):
-        isDownloaded = v;
-      case ResultFailure(failure: final f):
-        return Result.failure(f);
-    }
-
-    final sourceResult = isDownloaded
-        ? await downloads.getLocalPath(track.id)
-        : await mediaSource.getStreamUrl(track.id);
+    final sourceResult = track.sourceType == TrackSourceType.local
+        ? await localFileSource.getSourcePath(track.id)
+        : await _resolveCatalogSource(track);
     final String source;
     switch (sourceResult) {
       case Success(value: final v):
@@ -103,5 +107,20 @@ class PlayTrack {
 
     session.start(track.id);
     return const Result.success(null);
+  }
+
+  Future<Result<String, Failure>> _resolveCatalogSource(Track track) async {
+    final isDownloadedResult = await downloads.isDownloaded(track.id);
+    final bool isDownloaded;
+    switch (isDownloadedResult) {
+      case Success(value: final v):
+        isDownloaded = v;
+      case ResultFailure(failure: final f):
+        return Result.failure(f);
+    }
+
+    return isDownloaded
+        ? await downloads.getLocalPath(track.id)
+        : await mediaSource.getStreamUrl(track.id);
   }
 }
