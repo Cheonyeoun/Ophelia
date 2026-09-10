@@ -53,8 +53,7 @@ class CachedTracks extends Table {
   TextColumn get album => text().nullable()();
   IntColumn get durationMs => integer().nullable()();
   TextColumn get coverArtPath => text().nullable()();
-  BoolColumn get isDownloaded =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get isDownloaded => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -132,6 +131,26 @@ class PlaybackSession extends Table {
   IntColumn get queueIndex => integer()();
   IntColumn get positionMs => integer()();
   DateTimeColumn get savedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// The user's persisted app settings -- a singleton table, the same
+/// pattern as [Profile]/[PlaybackSession]: exactly one row, always at
+/// [DriftSettingsAdapter.settingsRowId], upserted atomically rather than
+/// checked-then-inserted-or-updated. Named `AppSettings`, not `Settings`,
+/// so its Drift-generated row class doesn't collide with the domain
+/// `Settings` entity (core/domain/settings.dart) -- the two are imported
+/// side by side in `DriftSettingsAdapter`.
+class AppSettings extends Table {
+  IntColumn get id => integer()();
+  TextColumn get streamingQuality => text()();
+  BoolColumn get gaplessPlayback => boolean()();
+  TextColumn get downloadQuality => text()();
+  BoolColumn get wifiOnlyDownloads => boolean()();
+  TextColumn get connectedServer => text()();
+  TextColumn get immersiveHudAutoHideDelay => text()();
 
   @override
   Set<Column> get primaryKey => {id};

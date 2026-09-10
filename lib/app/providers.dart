@@ -48,9 +48,9 @@ import '../core/usecases/update_profile.dart';
 import '../data/fakes/fake_download_port.dart';
 import '../data/fakes/fake_export_import_port.dart';
 import '../data/fakes/fake_media_source_port.dart';
-import '../data/fakes/fake_settings_port.dart';
 import '../data/local_db/database.dart' hide Playlist;
 import '../data/local_db/drift_library_adapter.dart';
+import '../data/local_db/drift_settings_adapter.dart';
 import '../data/local_files/local_file_source_adapter.dart';
 import '../features/settings/settings_state.dart';
 import '../playback/engine/just_audio_playback_adapter.dart';
@@ -63,15 +63,17 @@ import '../playback/engine/just_audio_playback_adapter.dart';
 // Most port providers below still wire in the fakes from lib/data/fakes/
 // — temporary, UI-development-only stand-ins (see that folder's doc
 // comments) — until their real adapters exist. `localLibraryProvider`,
-// `playbackEngineProvider`, and `localFileSourceProvider` are the
-// exceptions: they're backed by the real `DriftLibraryAdapter`
-// (lib/data/local_db/), `JustAudioPlaybackAdapter` (lib/playback/engine/),
-// and `LocalFileSourceAdapter` (lib/data/local_files/) now. Widget/unit
-// tests that want a fake's predictable, hardware-free behavior instead
-// must override the corresponding provider explicitly (in a
-// `ProviderScope`'s `overrides`, or a `ProviderContainer`'s) with
-// `FakeLocalLibraryPort()`/`FakePlaybackEnginePort()`/
-// `FakeLocalFileSourcePort()`.
+// `playbackEngineProvider`, `localFileSourceProvider`, and
+// `settingsPortProvider` are the exceptions: they're backed by the real
+// `DriftLibraryAdapter` (lib/data/local_db/), `JustAudioPlaybackAdapter`
+// (lib/playback/engine/), `LocalFileSourceAdapter`
+// (lib/data/local_files/), and `DriftSettingsAdapter`
+// (lib/data/local_db/) now. Widget/unit tests that want a fake's
+// predictable, hardware-free behavior instead must override the
+// corresponding provider explicitly (in a `ProviderScope`'s `overrides`,
+// or a `ProviderContainer`'s) with `FakeLocalLibraryPort()`/
+// `FakePlaybackEnginePort()`/`FakeLocalFileSourcePort()`/
+// `FakeSettingsPort()`.
 
 final mediaSourceProvider = Provider<MediaSourcePort>(
   (ref) => FakeMediaSourcePort(),
@@ -114,8 +116,12 @@ final exportImportProvider = Provider<ExportImportPort>(
   (ref) => FakeExportImportPort(),
 );
 
+/// Backed by the real `DriftSettingsAdapter` (lib/data/local_db/) -- see
+/// its own doc comment for why `getSettings` returns
+/// `Settings.defaults`, not a `Failure`, before anything's ever been
+/// saved.
 final settingsPortProvider = Provider<SettingsPort>(
-  (ref) => FakeSettingsPort(),
+  (ref) => DriftSettingsAdapter(ref.watch(opheliaDatabaseProvider)),
 );
 
 /// Shared between PlayTrack, PauseTrack, SkipNext, and SkipPrevious so
@@ -227,17 +233,15 @@ final setConnectedServerProvider = Provider<SetConnectedServer>(
 
 final setImmersiveHudAutoHideDelayProvider =
     Provider<SetImmersiveHudAutoHideDelay>(
-  (ref) => SetImmersiveHudAutoHideDelay(ref.watch(settingsPortProvider)),
-);
+      (ref) => SetImmersiveHudAutoHideDelay(ref.watch(settingsPortProvider)),
+    );
 
 /// The Settings screen's presentation-layer Notifier (see
 /// features/settings/settings_state.dart) — declared here, not alongside
 /// the `SettingsController` class, since provider construction belongs in
 /// the composition root (docs/architecture.md §4).
 final settingsControllerProvider =
-    NotifierProvider<SettingsController, Settings>(
-  SettingsController.new,
-);
+    NotifierProvider<SettingsController, Settings>(SettingsController.new);
 
 final downloadTrackProvider = Provider<DownloadTrack>(
   (ref) => DownloadTrack(ref.watch(downloadPortProvider)),
@@ -437,5 +441,8 @@ final topSongsProvider = FutureProvider<List<Track>>((ref) async {
   };
   final allTracks = await ref.watch(allTracksProvider.future);
   final byId = {for (final track in allTracks) track.id: track};
-  return [for (final id in ids) if (byId[id] != null) byId[id]!];
+  return [
+    for (final id in ids)
+      if (byId[id] != null) byId[id]!,
+  ];
 });

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ophelia/app/providers.dart';
 import 'package:ophelia/data/fakes/fake_local_library_port.dart';
+import 'package:ophelia/data/fakes/fake_settings_port.dart';
 import 'package:ophelia/data/local_db/database.dart';
 import 'package:ophelia/data/local_db/drift_library_adapter.dart';
 import 'package:ophelia/features/settings/settings_screen.dart';
@@ -16,43 +17,41 @@ void main() {
   // OpheliaDatabase alongside every other test file that does the same.
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
-  testWidgets(
-    'tapping a settings toggle flips and holds its visual state',
-    (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(body: SettingsScreen()),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('tapping a settings toggle flips and holds its visual state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          settingsPortProvider.overrideWithValue(FakeSettingsPort()),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SettingsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      final row = find.ancestor(
-        of: find.text('Gapless playback'),
-        matching: find.byType(Row),
-      );
-      final switchFinder = find.descendant(
-        of: row,
-        matching: find.byType(Switch),
-      );
+    final row = find.ancestor(
+      of: find.text('Gapless playback'),
+      matching: find.byType(Row),
+    );
+    final switchFinder = find.descendant(
+      of: row,
+      matching: find.byType(Switch),
+    );
 
-      expect(tester.widget<Switch>(switchFinder).value, isTrue);
+    expect(tester.widget<Switch>(switchFinder).value, isTrue);
 
-      await tester.tap(switchFinder);
-      await tester.pumpAndSettle();
+    await tester.tap(switchFinder);
+    await tester.pumpAndSettle();
 
-      expect(tester.widget<Switch>(switchFinder).value, isFalse);
+    expect(tester.widget<Switch>(switchFinder).value, isFalse);
 
-      // Pump again with no further interaction to prove the flipped
-      // state is actually held, not just a one-off animation frame.
-      await tester.pump();
-      expect(tester.widget<Switch>(switchFinder).value, isFalse);
-    },
-  );
+    // Pump again with no further interaction to prove the flipped
+    // state is actually held, not just a one-off animation frame.
+    await tester.pump();
+    expect(tester.widget<Switch>(switchFinder).value, isFalse);
+  });
 
   testWidgets(
     'tapping a toggle row\'s label (not just the switch) also flips its '
@@ -62,10 +61,9 @@ void main() {
         ProviderScope(
           overrides: [
             localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+            settingsPortProvider.overrideWithValue(FakeSettingsPort()),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: SettingsScreen()),
-          ),
+          child: const MaterialApp(home: Scaffold(body: SettingsScreen())),
         ),
       );
       await tester.pumpAndSettle();
@@ -94,10 +92,9 @@ void main() {
         ProviderScope(
           overrides: [
             localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+            settingsPortProvider.overrideWithValue(FakeSettingsPort()),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: SettingsScreen()),
-          ),
+          child: const MaterialApp(home: Scaffold(body: SettingsScreen())),
         ),
       );
       await tester.pumpAndSettle();
@@ -129,6 +126,7 @@ void main() {
             localLibraryProvider.overrideWithValue(
               DriftLibraryAdapter(database),
             ),
+            settingsPortProvider.overrideWithValue(FakeSettingsPort()),
           ],
           child: const MaterialApp(home: Scaffold(body: SettingsScreen())),
         ),

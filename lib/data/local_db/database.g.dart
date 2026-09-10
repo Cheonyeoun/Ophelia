@@ -3126,6 +3126,503 @@ class PlaybackQueueEntriesCompanion
   }
 }
 
+class $AppSettingsTable extends AppSettings
+    with TableInfo<$AppSettingsTable, AppSetting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AppSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _streamingQualityMeta = const VerificationMeta(
+    'streamingQuality',
+  );
+  @override
+  late final GeneratedColumn<String> streamingQuality = GeneratedColumn<String>(
+    'streaming_quality',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gaplessPlaybackMeta = const VerificationMeta(
+    'gaplessPlayback',
+  );
+  @override
+  late final GeneratedColumn<bool> gaplessPlayback = GeneratedColumn<bool>(
+    'gapless_playback',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("gapless_playback" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _downloadQualityMeta = const VerificationMeta(
+    'downloadQuality',
+  );
+  @override
+  late final GeneratedColumn<String> downloadQuality = GeneratedColumn<String>(
+    'download_quality',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _wifiOnlyDownloadsMeta = const VerificationMeta(
+    'wifiOnlyDownloads',
+  );
+  @override
+  late final GeneratedColumn<bool> wifiOnlyDownloads = GeneratedColumn<bool>(
+    'wifi_only_downloads',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("wifi_only_downloads" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _connectedServerMeta = const VerificationMeta(
+    'connectedServer',
+  );
+  @override
+  late final GeneratedColumn<String> connectedServer = GeneratedColumn<String>(
+    'connected_server',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _immersiveHudAutoHideDelayMeta =
+      const VerificationMeta('immersiveHudAutoHideDelay');
+  @override
+  late final GeneratedColumn<String> immersiveHudAutoHideDelay =
+      GeneratedColumn<String>(
+        'immersive_hud_auto_hide_delay',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    streamingQuality,
+    gaplessPlayback,
+    downloadQuality,
+    wifiOnlyDownloads,
+    connectedServer,
+    immersiveHudAutoHideDelay,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'app_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AppSetting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('streaming_quality')) {
+      context.handle(
+        _streamingQualityMeta,
+        streamingQuality.isAcceptableOrUnknown(
+          data['streaming_quality']!,
+          _streamingQualityMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_streamingQualityMeta);
+    }
+    if (data.containsKey('gapless_playback')) {
+      context.handle(
+        _gaplessPlaybackMeta,
+        gaplessPlayback.isAcceptableOrUnknown(
+          data['gapless_playback']!,
+          _gaplessPlaybackMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_gaplessPlaybackMeta);
+    }
+    if (data.containsKey('download_quality')) {
+      context.handle(
+        _downloadQualityMeta,
+        downloadQuality.isAcceptableOrUnknown(
+          data['download_quality']!,
+          _downloadQualityMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_downloadQualityMeta);
+    }
+    if (data.containsKey('wifi_only_downloads')) {
+      context.handle(
+        _wifiOnlyDownloadsMeta,
+        wifiOnlyDownloads.isAcceptableOrUnknown(
+          data['wifi_only_downloads']!,
+          _wifiOnlyDownloadsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_wifiOnlyDownloadsMeta);
+    }
+    if (data.containsKey('connected_server')) {
+      context.handle(
+        _connectedServerMeta,
+        connectedServer.isAcceptableOrUnknown(
+          data['connected_server']!,
+          _connectedServerMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_connectedServerMeta);
+    }
+    if (data.containsKey('immersive_hud_auto_hide_delay')) {
+      context.handle(
+        _immersiveHudAutoHideDelayMeta,
+        immersiveHudAutoHideDelay.isAcceptableOrUnknown(
+          data['immersive_hud_auto_hide_delay']!,
+          _immersiveHudAutoHideDelayMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_immersiveHudAutoHideDelayMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AppSetting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AppSetting(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      streamingQuality: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}streaming_quality'],
+      )!,
+      gaplessPlayback: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}gapless_playback'],
+      )!,
+      downloadQuality: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}download_quality'],
+      )!,
+      wifiOnlyDownloads: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}wifi_only_downloads'],
+      )!,
+      connectedServer: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}connected_server'],
+      )!,
+      immersiveHudAutoHideDelay: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}immersive_hud_auto_hide_delay'],
+      )!,
+    );
+  }
+
+  @override
+  $AppSettingsTable createAlias(String alias) {
+    return $AppSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class AppSetting extends DataClass implements Insertable<AppSetting> {
+  final int id;
+  final String streamingQuality;
+  final bool gaplessPlayback;
+  final String downloadQuality;
+  final bool wifiOnlyDownloads;
+  final String connectedServer;
+  final String immersiveHudAutoHideDelay;
+  const AppSetting({
+    required this.id,
+    required this.streamingQuality,
+    required this.gaplessPlayback,
+    required this.downloadQuality,
+    required this.wifiOnlyDownloads,
+    required this.connectedServer,
+    required this.immersiveHudAutoHideDelay,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['streaming_quality'] = Variable<String>(streamingQuality);
+    map['gapless_playback'] = Variable<bool>(gaplessPlayback);
+    map['download_quality'] = Variable<String>(downloadQuality);
+    map['wifi_only_downloads'] = Variable<bool>(wifiOnlyDownloads);
+    map['connected_server'] = Variable<String>(connectedServer);
+    map['immersive_hud_auto_hide_delay'] = Variable<String>(
+      immersiveHudAutoHideDelay,
+    );
+    return map;
+  }
+
+  AppSettingsCompanion toCompanion(bool nullToAbsent) {
+    return AppSettingsCompanion(
+      id: Value(id),
+      streamingQuality: Value(streamingQuality),
+      gaplessPlayback: Value(gaplessPlayback),
+      downloadQuality: Value(downloadQuality),
+      wifiOnlyDownloads: Value(wifiOnlyDownloads),
+      connectedServer: Value(connectedServer),
+      immersiveHudAutoHideDelay: Value(immersiveHudAutoHideDelay),
+    );
+  }
+
+  factory AppSetting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AppSetting(
+      id: serializer.fromJson<int>(json['id']),
+      streamingQuality: serializer.fromJson<String>(json['streamingQuality']),
+      gaplessPlayback: serializer.fromJson<bool>(json['gaplessPlayback']),
+      downloadQuality: serializer.fromJson<String>(json['downloadQuality']),
+      wifiOnlyDownloads: serializer.fromJson<bool>(json['wifiOnlyDownloads']),
+      connectedServer: serializer.fromJson<String>(json['connectedServer']),
+      immersiveHudAutoHideDelay: serializer.fromJson<String>(
+        json['immersiveHudAutoHideDelay'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'streamingQuality': serializer.toJson<String>(streamingQuality),
+      'gaplessPlayback': serializer.toJson<bool>(gaplessPlayback),
+      'downloadQuality': serializer.toJson<String>(downloadQuality),
+      'wifiOnlyDownloads': serializer.toJson<bool>(wifiOnlyDownloads),
+      'connectedServer': serializer.toJson<String>(connectedServer),
+      'immersiveHudAutoHideDelay': serializer.toJson<String>(
+        immersiveHudAutoHideDelay,
+      ),
+    };
+  }
+
+  AppSetting copyWith({
+    int? id,
+    String? streamingQuality,
+    bool? gaplessPlayback,
+    String? downloadQuality,
+    bool? wifiOnlyDownloads,
+    String? connectedServer,
+    String? immersiveHudAutoHideDelay,
+  }) => AppSetting(
+    id: id ?? this.id,
+    streamingQuality: streamingQuality ?? this.streamingQuality,
+    gaplessPlayback: gaplessPlayback ?? this.gaplessPlayback,
+    downloadQuality: downloadQuality ?? this.downloadQuality,
+    wifiOnlyDownloads: wifiOnlyDownloads ?? this.wifiOnlyDownloads,
+    connectedServer: connectedServer ?? this.connectedServer,
+    immersiveHudAutoHideDelay:
+        immersiveHudAutoHideDelay ?? this.immersiveHudAutoHideDelay,
+  );
+  AppSetting copyWithCompanion(AppSettingsCompanion data) {
+    return AppSetting(
+      id: data.id.present ? data.id.value : this.id,
+      streamingQuality: data.streamingQuality.present
+          ? data.streamingQuality.value
+          : this.streamingQuality,
+      gaplessPlayback: data.gaplessPlayback.present
+          ? data.gaplessPlayback.value
+          : this.gaplessPlayback,
+      downloadQuality: data.downloadQuality.present
+          ? data.downloadQuality.value
+          : this.downloadQuality,
+      wifiOnlyDownloads: data.wifiOnlyDownloads.present
+          ? data.wifiOnlyDownloads.value
+          : this.wifiOnlyDownloads,
+      connectedServer: data.connectedServer.present
+          ? data.connectedServer.value
+          : this.connectedServer,
+      immersiveHudAutoHideDelay: data.immersiveHudAutoHideDelay.present
+          ? data.immersiveHudAutoHideDelay.value
+          : this.immersiveHudAutoHideDelay,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSetting(')
+          ..write('id: $id, ')
+          ..write('streamingQuality: $streamingQuality, ')
+          ..write('gaplessPlayback: $gaplessPlayback, ')
+          ..write('downloadQuality: $downloadQuality, ')
+          ..write('wifiOnlyDownloads: $wifiOnlyDownloads, ')
+          ..write('connectedServer: $connectedServer, ')
+          ..write('immersiveHudAutoHideDelay: $immersiveHudAutoHideDelay')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    streamingQuality,
+    gaplessPlayback,
+    downloadQuality,
+    wifiOnlyDownloads,
+    connectedServer,
+    immersiveHudAutoHideDelay,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AppSetting &&
+          other.id == this.id &&
+          other.streamingQuality == this.streamingQuality &&
+          other.gaplessPlayback == this.gaplessPlayback &&
+          other.downloadQuality == this.downloadQuality &&
+          other.wifiOnlyDownloads == this.wifiOnlyDownloads &&
+          other.connectedServer == this.connectedServer &&
+          other.immersiveHudAutoHideDelay == this.immersiveHudAutoHideDelay);
+}
+
+class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
+  final Value<int> id;
+  final Value<String> streamingQuality;
+  final Value<bool> gaplessPlayback;
+  final Value<String> downloadQuality;
+  final Value<bool> wifiOnlyDownloads;
+  final Value<String> connectedServer;
+  final Value<String> immersiveHudAutoHideDelay;
+  const AppSettingsCompanion({
+    this.id = const Value.absent(),
+    this.streamingQuality = const Value.absent(),
+    this.gaplessPlayback = const Value.absent(),
+    this.downloadQuality = const Value.absent(),
+    this.wifiOnlyDownloads = const Value.absent(),
+    this.connectedServer = const Value.absent(),
+    this.immersiveHudAutoHideDelay = const Value.absent(),
+  });
+  AppSettingsCompanion.insert({
+    this.id = const Value.absent(),
+    required String streamingQuality,
+    required bool gaplessPlayback,
+    required String downloadQuality,
+    required bool wifiOnlyDownloads,
+    required String connectedServer,
+    required String immersiveHudAutoHideDelay,
+  }) : streamingQuality = Value(streamingQuality),
+       gaplessPlayback = Value(gaplessPlayback),
+       downloadQuality = Value(downloadQuality),
+       wifiOnlyDownloads = Value(wifiOnlyDownloads),
+       connectedServer = Value(connectedServer),
+       immersiveHudAutoHideDelay = Value(immersiveHudAutoHideDelay);
+  static Insertable<AppSetting> custom({
+    Expression<int>? id,
+    Expression<String>? streamingQuality,
+    Expression<bool>? gaplessPlayback,
+    Expression<String>? downloadQuality,
+    Expression<bool>? wifiOnlyDownloads,
+    Expression<String>? connectedServer,
+    Expression<String>? immersiveHudAutoHideDelay,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (streamingQuality != null) 'streaming_quality': streamingQuality,
+      if (gaplessPlayback != null) 'gapless_playback': gaplessPlayback,
+      if (downloadQuality != null) 'download_quality': downloadQuality,
+      if (wifiOnlyDownloads != null) 'wifi_only_downloads': wifiOnlyDownloads,
+      if (connectedServer != null) 'connected_server': connectedServer,
+      if (immersiveHudAutoHideDelay != null)
+        'immersive_hud_auto_hide_delay': immersiveHudAutoHideDelay,
+    });
+  }
+
+  AppSettingsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? streamingQuality,
+    Value<bool>? gaplessPlayback,
+    Value<String>? downloadQuality,
+    Value<bool>? wifiOnlyDownloads,
+    Value<String>? connectedServer,
+    Value<String>? immersiveHudAutoHideDelay,
+  }) {
+    return AppSettingsCompanion(
+      id: id ?? this.id,
+      streamingQuality: streamingQuality ?? this.streamingQuality,
+      gaplessPlayback: gaplessPlayback ?? this.gaplessPlayback,
+      downloadQuality: downloadQuality ?? this.downloadQuality,
+      wifiOnlyDownloads: wifiOnlyDownloads ?? this.wifiOnlyDownloads,
+      connectedServer: connectedServer ?? this.connectedServer,
+      immersiveHudAutoHideDelay:
+          immersiveHudAutoHideDelay ?? this.immersiveHudAutoHideDelay,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (streamingQuality.present) {
+      map['streaming_quality'] = Variable<String>(streamingQuality.value);
+    }
+    if (gaplessPlayback.present) {
+      map['gapless_playback'] = Variable<bool>(gaplessPlayback.value);
+    }
+    if (downloadQuality.present) {
+      map['download_quality'] = Variable<String>(downloadQuality.value);
+    }
+    if (wifiOnlyDownloads.present) {
+      map['wifi_only_downloads'] = Variable<bool>(wifiOnlyDownloads.value);
+    }
+    if (connectedServer.present) {
+      map['connected_server'] = Variable<String>(connectedServer.value);
+    }
+    if (immersiveHudAutoHideDelay.present) {
+      map['immersive_hud_auto_hide_delay'] = Variable<String>(
+        immersiveHudAutoHideDelay.value,
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingsCompanion(')
+          ..write('id: $id, ')
+          ..write('streamingQuality: $streamingQuality, ')
+          ..write('gaplessPlayback: $gaplessPlayback, ')
+          ..write('downloadQuality: $downloadQuality, ')
+          ..write('wifiOnlyDownloads: $wifiOnlyDownloads, ')
+          ..write('connectedServer: $connectedServer, ')
+          ..write('immersiveHudAutoHideDelay: $immersiveHudAutoHideDelay')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$OpheliaDatabase extends GeneratedDatabase {
   _$OpheliaDatabase(QueryExecutor e) : super(e);
   $OpheliaDatabaseManager get managers => $OpheliaDatabaseManager(this);
@@ -3143,6 +3640,7 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
   );
   late final $PlaybackQueueEntriesTable playbackQueueEntries =
       $PlaybackQueueEntriesTable(this);
+  late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final Index playlistTracksTrackId = Index(
     'playlist_tracks_track_id',
     'CREATE INDEX playlist_tracks_track_id ON playlist_tracks (track_id)',
@@ -3173,6 +3671,7 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
     linkedFolders,
     playbackSession,
     playbackQueueEntries,
+    appSettings,
     playlistTracksTrackId,
     listeningEventsTrackId,
     listeningEventsPlayedAt,
@@ -6068,6 +6567,250 @@ typedef $$PlaybackQueueEntriesTableProcessedTableManager =
       PlaybackQueueEntry,
       PrefetchHooks Function({bool sessionId})
     >;
+typedef $$AppSettingsTableCreateCompanionBuilder =
+    AppSettingsCompanion Function({
+      Value<int> id,
+      required String streamingQuality,
+      required bool gaplessPlayback,
+      required String downloadQuality,
+      required bool wifiOnlyDownloads,
+      required String connectedServer,
+      required String immersiveHudAutoHideDelay,
+    });
+typedef $$AppSettingsTableUpdateCompanionBuilder =
+    AppSettingsCompanion Function({
+      Value<int> id,
+      Value<String> streamingQuality,
+      Value<bool> gaplessPlayback,
+      Value<String> downloadQuality,
+      Value<bool> wifiOnlyDownloads,
+      Value<String> connectedServer,
+      Value<String> immersiveHudAutoHideDelay,
+    });
+
+class $$AppSettingsTableFilterComposer
+    extends Composer<_$OpheliaDatabase, $AppSettingsTable> {
+  $$AppSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get streamingQuality => $composableBuilder(
+    column: $table.streamingQuality,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get gaplessPlayback => $composableBuilder(
+    column: $table.gaplessPlayback,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get downloadQuality => $composableBuilder(
+    column: $table.downloadQuality,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get wifiOnlyDownloads => $composableBuilder(
+    column: $table.wifiOnlyDownloads,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get connectedServer => $composableBuilder(
+    column: $table.connectedServer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get immersiveHudAutoHideDelay => $composableBuilder(
+    column: $table.immersiveHudAutoHideDelay,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AppSettingsTableOrderingComposer
+    extends Composer<_$OpheliaDatabase, $AppSettingsTable> {
+  $$AppSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get streamingQuality => $composableBuilder(
+    column: $table.streamingQuality,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get gaplessPlayback => $composableBuilder(
+    column: $table.gaplessPlayback,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get downloadQuality => $composableBuilder(
+    column: $table.downloadQuality,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get wifiOnlyDownloads => $composableBuilder(
+    column: $table.wifiOnlyDownloads,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get connectedServer => $composableBuilder(
+    column: $table.connectedServer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get immersiveHudAutoHideDelay => $composableBuilder(
+    column: $table.immersiveHudAutoHideDelay,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AppSettingsTableAnnotationComposer
+    extends Composer<_$OpheliaDatabase, $AppSettingsTable> {
+  $$AppSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get streamingQuality => $composableBuilder(
+    column: $table.streamingQuality,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get gaplessPlayback => $composableBuilder(
+    column: $table.gaplessPlayback,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get downloadQuality => $composableBuilder(
+    column: $table.downloadQuality,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get wifiOnlyDownloads => $composableBuilder(
+    column: $table.wifiOnlyDownloads,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get connectedServer => $composableBuilder(
+    column: $table.connectedServer,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get immersiveHudAutoHideDelay => $composableBuilder(
+    column: $table.immersiveHudAutoHideDelay,
+    builder: (column) => column,
+  );
+}
+
+class $$AppSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$OpheliaDatabase,
+          $AppSettingsTable,
+          AppSetting,
+          $$AppSettingsTableFilterComposer,
+          $$AppSettingsTableOrderingComposer,
+          $$AppSettingsTableAnnotationComposer,
+          $$AppSettingsTableCreateCompanionBuilder,
+          $$AppSettingsTableUpdateCompanionBuilder,
+          (
+            AppSetting,
+            BaseReferences<_$OpheliaDatabase, $AppSettingsTable, AppSetting>,
+          ),
+          AppSetting,
+          PrefetchHooks Function()
+        > {
+  $$AppSettingsTableTableManager(_$OpheliaDatabase db, $AppSettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppSettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppSettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppSettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> streamingQuality = const Value.absent(),
+                Value<bool> gaplessPlayback = const Value.absent(),
+                Value<String> downloadQuality = const Value.absent(),
+                Value<bool> wifiOnlyDownloads = const Value.absent(),
+                Value<String> connectedServer = const Value.absent(),
+                Value<String> immersiveHudAutoHideDelay = const Value.absent(),
+              }) => AppSettingsCompanion(
+                id: id,
+                streamingQuality: streamingQuality,
+                gaplessPlayback: gaplessPlayback,
+                downloadQuality: downloadQuality,
+                wifiOnlyDownloads: wifiOnlyDownloads,
+                connectedServer: connectedServer,
+                immersiveHudAutoHideDelay: immersiveHudAutoHideDelay,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String streamingQuality,
+                required bool gaplessPlayback,
+                required String downloadQuality,
+                required bool wifiOnlyDownloads,
+                required String connectedServer,
+                required String immersiveHudAutoHideDelay,
+              }) => AppSettingsCompanion.insert(
+                id: id,
+                streamingQuality: streamingQuality,
+                gaplessPlayback: gaplessPlayback,
+                downloadQuality: downloadQuality,
+                wifiOnlyDownloads: wifiOnlyDownloads,
+                connectedServer: connectedServer,
+                immersiveHudAutoHideDelay: immersiveHudAutoHideDelay,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AppSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OpheliaDatabase,
+      $AppSettingsTable,
+      AppSetting,
+      $$AppSettingsTableFilterComposer,
+      $$AppSettingsTableOrderingComposer,
+      $$AppSettingsTableAnnotationComposer,
+      $$AppSettingsTableCreateCompanionBuilder,
+      $$AppSettingsTableUpdateCompanionBuilder,
+      (
+        AppSetting,
+        BaseReferences<_$OpheliaDatabase, $AppSettingsTable, AppSetting>,
+      ),
+      AppSetting,
+      PrefetchHooks Function()
+    >;
 
 class $OpheliaDatabaseManager {
   final _$OpheliaDatabase _db;
@@ -6090,4 +6833,6 @@ class $OpheliaDatabaseManager {
       $$PlaybackSessionTableTableManager(_db, _db.playbackSession);
   $$PlaybackQueueEntriesTableTableManager get playbackQueueEntries =>
       $$PlaybackQueueEntriesTableTableManager(_db, _db.playbackQueueEntries);
+  $$AppSettingsTableTableManager get appSettings =>
+      $$AppSettingsTableTableManager(_db, _db.appSettings);
 }
