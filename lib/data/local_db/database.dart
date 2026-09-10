@@ -22,6 +22,7 @@ part 'database.g.dart';
     LinkedFolders,
     PlaybackSession,
     PlaybackQueueEntries,
+    AppSettings,
   ],
 )
 class OpheliaDatabase extends _$OpheliaDatabase {
@@ -29,7 +30,7 @@ class OpheliaDatabase extends _$OpheliaDatabase {
   /// `NativeDatabase.memory()` instead of the real, isolate-backed
   /// connection [defaultConnection] opens.
   OpheliaDatabase([QueryExecutor? executor])
-      : super(executor ?? defaultConnection());
+    : super(executor ?? defaultConnection());
 
   /// The real connection used outside tests. `driftDatabase`
   /// (package:drift_flutter) is conditionally implemented per platform
@@ -54,53 +55,59 @@ class OpheliaDatabase extends _$OpheliaDatabase {
   ///   https://github.com/simolus3/sqlite3.dart/releases. [web] is
   ///   required when compiling for web and ignored on native.
   static QueryExecutor defaultConnection() => driftDatabase(
-        name: 'ophelia',
-        web: DriftWebOptions(
-          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-          driftWorker: Uri.parse('drift_worker.js'),
-        ),
-      );
+    name: 'ophelia',
+    web: DriftWebOptions(
+      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+      driftWorker: Uri.parse('drift_worker.js'),
+    ),
+  );
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, from, to) async {
-          // v1 -> v2: added `linked_folders` (local_file_source feature) --
-          // an existing install's database file predates this table, and
-          // `onCreate` only ever runs for a brand-new file, so without this
-          // step every `LocalFileSourceAdapter` call would hit a real
-          // "no such table" error on any device that already had the app
-          // installed before this table existed.
-          if (from < 2) {
-            await m.createTable(linkedFolders);
-          }
-          // v2 -> v3: added `playback_session`/`playback_queue_entries`
-          // (session-restore-on-startup feature) -- same reasoning as the
-          // v1 -> v2 step above.
-          if (from < 3) {
-            await m.createTable(playbackSession);
-            await m.createTable(playbackQueueEntries);
-          }
-        },
-        beforeOpen: (details) async {
-          // SQLite disables foreign key enforcement by default; without
-          // this, every `.references()` constraint in tables.dart
-          // (including the cascade delete from playlists to
-          // playlist_tracks) would silently do nothing.
-          await customStatement('PRAGMA foreign_keys = ON');
-          // docs/architecture.md §5.3: so background writes (listening
-          // events) don't block foreground reads (library browsing).
-          // Skipped on web -- drift's wasm backend documents WAL as
-          // unsupported there (https://drift.simonbinder.eu/web/) -- and
-          // a no-op on the in-memory database tests use, since SQLite
-          // doesn't support WAL for ':memory:' and just keeps its
-          // existing journal mode instead of erroring.
-          if (!kIsWeb) {
-            await customStatement('PRAGMA journal_mode = WAL');
-          }
-        },
-      );
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      // v1 -> v2: added `linked_folders` (local_file_source feature) --
+      // an existing install's database file predates this table, and
+      // `onCreate` only ever runs for a brand-new file, so without this
+      // step every `LocalFileSourceAdapter` call would hit a real
+      // "no such table" error on any device that already had the app
+      // installed before this table existed.
+      if (from < 2) {
+        await m.createTable(linkedFolders);
+      }
+      // v2 -> v3: added `playback_session`/`playback_queue_entries`
+      // (session-restore-on-startup feature) -- same reasoning as the
+      // v1 -> v2 step above.
+      if (from < 3) {
+        await m.createTable(playbackSession);
+        await m.createTable(playbackQueueEntries);
+      }
+      // v3 -> v4: added `app_settings` (real SettingsPort adapter,
+      // replacing FakeSettingsPort) -- same reasoning as the steps
+      // above.
+      if (from < 4) {
+        await m.createTable(appSettings);
+      }
+    },
+    beforeOpen: (details) async {
+      // SQLite disables foreign key enforcement by default; without
+      // this, every `.references()` constraint in tables.dart
+      // (including the cascade delete from playlists to
+      // playlist_tracks) would silently do nothing.
+      await customStatement('PRAGMA foreign_keys = ON');
+      // docs/architecture.md §5.3: so background writes (listening
+      // events) don't block foreground reads (library browsing).
+      // Skipped on web -- drift's wasm backend documents WAL as
+      // unsupported there (https://drift.simonbinder.eu/web/) -- and
+      // a no-op on the in-memory database tests use, since SQLite
+      // doesn't support WAL for ':memory:' and just keeps its
+      // existing journal mode instead of erroring.
+      if (!kIsWeb) {
+        await customStatement('PRAGMA journal_mode = WAL');
+      }
+    },
+  );
 }

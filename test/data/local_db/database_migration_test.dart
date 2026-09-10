@@ -18,79 +18,109 @@ import 'package:ophelia/data/local_db/database.dart';
 /// does, to stamp `PRAGMA user_version = 1` the same way a real v1
 /// install's database file would already carry it.
 void main() {
+  test('reopening a pre-existing v1 database creates linked_folders via '
+      'onUpgrade, instead of leaving it missing and failing with '
+      '"no such table" the first time it is used', () async {
+    final executor = NativeDatabase.memory(
+      setup: (rawDb) => rawDb.execute('PRAGMA user_version = 1'),
+    );
+    final db = OpheliaDatabase(executor);
+
+    try {
+      // Opening the database must trigger onUpgrade(from: 1, to: 2) and
+      // create linked_folders -- without that, this throws a real
+      // SqliteException ("no such table: linked_folders") instead of
+      // succeeding.
+      await db
+          .into(db.linkedFolders)
+          .insert(
+            LinkedFoldersCompanion.insert(
+              path: '/music',
+              linkedAt: DateTime.now(),
+            ),
+          );
+      final rows = await db.select(db.linkedFolders).get();
+
+      expect(rows.map((r) => r.path), ['/music']);
+    } finally {
+      await db.close();
+    }
+  });
+
+  test('reopening a pre-existing v2 database creates playback_session and '
+      'playback_queue_entries via onUpgrade, instead of leaving them missing '
+      '(session-restore-on-startup feature)', () async {
+    final executor = NativeDatabase.memory(
+      setup: (rawDb) => rawDb.execute('PRAGMA user_version = 2'),
+    );
+    final db = OpheliaDatabase(executor);
+
+    try {
+      await db
+          .into(db.playbackSession)
+          .insert(
+            PlaybackSessionCompanion.insert(
+              id: const Value(1),
+              queueIndex: 0,
+              positionMs: 0,
+              savedAt: DateTime.now(),
+            ),
+          );
+      await db
+          .into(db.playbackQueueEntries)
+          .insert(
+            PlaybackQueueEntriesCompanion.insert(
+              sessionId: 1,
+              position: 0,
+              trackId: 't1',
+              title: 'Title',
+              artist: 'Artist',
+              album: 'Album',
+              durationMs: 1000,
+              sourceType: 'streamed',
+            ),
+          );
+
+      final sessionRows = await db.select(db.playbackSession).get();
+      final entryRows = await db.select(db.playbackQueueEntries).get();
+
+      expect(sessionRows, hasLength(1));
+      expect(entryRows.map((e) => e.trackId), ['t1']);
+    } finally {
+      await db.close();
+    }
+  });
+
   test(
-    'reopening a pre-existing v1 database creates linked_folders via '
-    'onUpgrade, instead of leaving it missing and failing with '
-    '"no such table" the first time it is used',
+    'reopening a pre-existing v3 database creates app_settings via '
+    'onUpgrade, instead of leaving it missing (real SettingsPort adapter)',
     () async {
       final executor = NativeDatabase.memory(
-        setup: (rawDb) => rawDb.execute('PRAGMA user_version = 1'),
+        setup: (rawDb) => rawDb.execute('PRAGMA user_version = 3'),
       );
       final db = OpheliaDatabase(executor);
 
       try {
-        // Opening the database must trigger onUpgrade(from: 1, to: 2) and
-        // create linked_folders -- without that, this throws a real
-        // SqliteException ("no such table: linked_folders") instead of
+        // Opening the database must trigger onUpgrade(from: 3, to: 4) and
+        // create app_settings -- without that, this throws a real
+        // SqliteException ("no such table: app_settings") instead of
         // succeeding.
         await db
-            .into(db.linkedFolders)
+            .into(db.appSettings)
             .insert(
-              LinkedFoldersCompanion.insert(
-                path: '/music',
-                linkedAt: DateTime.now(),
-              ),
-            );
-        final rows = await db.select(db.linkedFolders).get();
-
-        expect(rows.map((r) => r.path), ['/music']);
-      } finally {
-        await db.close();
-      }
-    },
-  );
-
-  test(
-    'reopening a pre-existing v2 database creates playback_session and '
-    'playback_queue_entries via onUpgrade, instead of leaving them missing '
-    '(session-restore-on-startup feature)',
-    () async {
-      final executor = NativeDatabase.memory(
-        setup: (rawDb) => rawDb.execute('PRAGMA user_version = 2'),
-      );
-      final db = OpheliaDatabase(executor);
-
-      try {
-        await db
-            .into(db.playbackSession)
-            .insert(
-              PlaybackSessionCompanion.insert(
+              AppSettingsCompanion.insert(
                 id: const Value(1),
-                queueIndex: 0,
-                positionMs: 0,
-                savedAt: DateTime.now(),
+                streamingQuality: 'Low',
+                gaplessPlayback: true,
+                downloadQuality: 'Lossless',
+                wifiOnlyDownloads: true,
+                connectedServer: 'Home library',
+                immersiveHudAutoHideDelay: '5s',
               ),
             );
-        await db
-            .into(db.playbackQueueEntries)
-            .insert(
-              PlaybackQueueEntriesCompanion.insert(
-                sessionId: 1,
-                position: 0,
-                trackId: 't1',
-                title: 'Title',
-                artist: 'Artist',
-                album: 'Album',
-                durationMs: 1000,
-                sourceType: 'streamed',
-              ),
-            );
+        final rows = await db.select(db.appSettings).get();
 
-        final sessionRows = await db.select(db.playbackSession).get();
-        final entryRows = await db.select(db.playbackQueueEntries).get();
-
-        expect(sessionRows, hasLength(1));
-        expect(entryRows.map((e) => e.trackId), ['t1']);
+        expect(rows.map((r) => r.streamingQuality), ['Low']);
       } finally {
         await db.close();
       }
