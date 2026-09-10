@@ -24,7 +24,9 @@ import '../core/usecases/listening_session.dart';
 import '../core/usecases/pause_track.dart';
 import '../core/usecases/play_track.dart';
 import '../core/usecases/remove_download.dart';
+import '../core/usecases/restore_last_session.dart';
 import '../core/usecases/resume_track.dart';
+import '../core/usecases/save_last_playback_state.dart';
 import '../core/usecases/save_playlist.dart';
 import '../core/usecases/scan_local_folder.dart';
 import '../core/usecases/search_catalog.dart';
@@ -32,6 +34,7 @@ import '../core/usecases/seek_by.dart';
 import '../core/usecases/seek_to.dart';
 import '../core/usecases/set_connected_server.dart';
 import '../core/usecases/set_download_quality.dart';
+import '../core/usecases/set_immersive_hud_auto_hide_delay.dart';
 import '../core/usecases/set_streaming_quality.dart';
 import '../core/usecases/skip_next.dart';
 import '../core/usecases/skip_previous.dart';
@@ -222,6 +225,11 @@ final setConnectedServerProvider = Provider<SetConnectedServer>(
   (ref) => SetConnectedServer(ref.watch(settingsPortProvider)),
 );
 
+final setImmersiveHudAutoHideDelayProvider =
+    Provider<SetImmersiveHudAutoHideDelay>(
+  (ref) => SetImmersiveHudAutoHideDelay(ref.watch(settingsPortProvider)),
+);
+
 /// The Settings screen's presentation-layer Notifier (see
 /// features/settings/settings_state.dart) — declared here, not alongside
 /// the `SettingsController` class, since provider construction belongs in
@@ -269,6 +277,18 @@ final unlinkFolderProvider = Provider<UnlinkFolder>(
 
 final scanLocalFolderProvider = Provider<ScanLocalFolder>(
   (ref) => ScanLocalFolder(ref.watch(localFileSourceProvider)),
+);
+
+final saveLastPlaybackStateProvider = Provider<SaveLastPlaybackState>(
+  (ref) => SaveLastPlaybackState(ref.watch(localLibraryProvider)),
+);
+
+final restoreLastSessionProvider = Provider<RestoreLastSession>(
+  (ref) => RestoreLastSession(
+    ref.watch(localLibraryProvider),
+    ref.watch(localFileSourceProvider),
+    ref.watch(downloadPortProvider),
+  ),
 );
 
 // ---------------------------------------------------------------------
@@ -388,6 +408,12 @@ final linkedFoldersProvider = FutureProvider<List<String>>((ref) async {
 /// from. Re-scans the folder live on every read rather than caching --
 /// see `LocalFileSourceAdapter`'s doc comment on why nothing here
 /// persists a separate track registry.
+///
+/// A [ResultFailure] (e.g. a denied permission, or the folder itself now
+/// unreadable) is rethrown rather than swallowed into an empty list --
+/// same reasoning as [playlistProvider]/[artistTracksProvider]: an empty
+/// list must only ever mean "genuinely no audio files here," never
+/// "something went wrong reading this folder."
 final localFolderTracksProvider = FutureProvider.family<List<Track>, String>((
   ref,
   pathOrUri,
@@ -395,7 +421,7 @@ final localFolderTracksProvider = FutureProvider.family<List<Track>, String>((
   final result = await ref.watch(scanLocalFolderProvider)(pathOrUri);
   return switch (result) {
     Success(value: final tracks) => tracks,
-    ResultFailure() => const [],
+    ResultFailure(failure: final f) => throw f,
   };
 });
 

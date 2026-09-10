@@ -72,6 +72,12 @@ class SettingsScreen extends ConsumerWidget {
             onToggle: (_) => settingsController.toggleGaplessPlayback(),
             onTap: settingsController.toggleGaplessPlayback,
           ),
+          _SettingRow(
+            icon: Icons.timer_outlined,
+            label: 'Immersive Play auto-hide',
+            value: settings.immersiveHudAutoHideDelay,
+            onTap: settingsController.cycleImmersiveHudAutoHideDelay,
+          ),
           const _SectionLabel('Downloads'),
           _SettingRow(
             icon: Icons.high_quality_outlined,

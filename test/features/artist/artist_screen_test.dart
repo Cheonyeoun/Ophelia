@@ -7,6 +7,7 @@ import 'package:ophelia/core/domain/media_source_port.dart';
 import 'package:ophelia/core/domain/track.dart';
 import 'package:ophelia/core/error/failure.dart';
 import 'package:ophelia/core/error/result.dart';
+import 'package:ophelia/data/fakes/fake_local_file_source_port.dart';
 import 'package:ophelia/data/fakes/fake_local_library_port.dart';
 import 'package:ophelia/data/fakes/fake_media_source_port.dart';
 import 'package:ophelia/main.dart';
@@ -54,6 +55,7 @@ void main() {
       ProviderScope(
         overrides: [
           localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          localFileSourceProvider.overrideWithValue(FakeLocalFileSourcePort()),
         ],
         child: const OpheliaApp(),
       ),
@@ -101,47 +103,45 @@ void main() {
     },
   );
 
-  testWidgets(
-    'an artist name containing a literal % round-trips through the '
-    'route without being double-decoded',
-    (tester) async {
-      const trickyTrack = Track(
-        id: 'tricky',
-        title: 'Off Beat',
-        artist: '50% Off',
-        album: 'Sale',
-        durationMs: 180000,
-        sourceType: TrackSourceType.streamed,
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mediaSourceProvider.overrideWithValue(
-              FakeMediaSourcePort(tracks: const [trickyTrack]),
-            ),
-            localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
-          ],
-          child: const OpheliaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(OpheliaApp)),
-      );
-      final router = container.read(routerProvider);
+  testWidgets('an artist name containing a literal % round-trips through the '
+      'route without being double-decoded', (tester) async {
+    const trickyTrack = Track(
+      id: 'tricky',
+      title: 'Off Beat',
+      artist: '50% Off',
+      album: 'Sale',
+      durationMs: 180000,
+      sourceType: TrackSourceType.streamed,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mediaSourceProvider.overrideWithValue(
+            FakeMediaSourcePort(tracks: const [trickyTrack]),
+          ),
+          localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+          localFileSourceProvider.overrideWithValue(FakeLocalFileSourcePort()),
+        ],
+        child: const OpheliaApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(OpheliaApp)),
+    );
+    final router = container.read(routerProvider);
 
-      // Mirrors exactly what library_screen.dart does when pushing this
-      // route. A manual Uri.decodeComponent on receipt would double
-      // decode this and throw a FormatException trying to parse '% O'
-      // (from the already-decoded '50% Off') as percent-encoding.
-      router.push('/artist/${Uri.encodeComponent('50% Off')}');
-      await tester.pumpAndSettle();
+    // Mirrors exactly what library_screen.dart does when pushing this
+    // route. A manual Uri.decodeComponent on receipt would double
+    // decode this and throw a FormatException trying to parse '% O'
+    // (from the already-decoded '50% Off') as percent-encoding.
+    router.push('/artist/${Uri.encodeComponent('50% Off')}');
+    await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-      expect(find.text('50% Off'), findsOneWidget);
-      expect(find.text('Off Beat'), findsOneWidget);
-    },
-  );
+    expect(tester.takeException(), isNull);
+    expect(find.text('50% Off'), findsOneWidget);
+    expect(find.text('Off Beat'), findsOneWidget);
+  });
 
   testWidgets(
     'a ResultFailure from GetArtistTracks renders the error state with '
@@ -155,6 +155,9 @@ void main() {
           overrides: [
             mediaSourceProvider.overrideWithValue(failingMediaSource),
             localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
+            localFileSourceProvider.overrideWithValue(
+              FakeLocalFileSourcePort(),
+            ),
           ],
           child: const OpheliaApp(),
         ),

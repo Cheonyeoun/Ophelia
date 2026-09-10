@@ -1,5 +1,6 @@
 import '../../core/domain/listening_event.dart';
 import '../../core/domain/local_library_port.dart';
+import '../../core/domain/playback_session_snapshot.dart';
 import '../../core/domain/playlist.dart';
 import '../../core/domain/user_profile.dart';
 import '../../core/error/failure.dart';
@@ -81,5 +82,21 @@ class FakeLocalLibraryPort implements LocalLibraryPort {
   @override
   Future<Result<List<ListeningEvent>, Failure>> getListeningEvents() async {
     return Result.success(List.unmodifiable(_listeningEvents));
+  }
+
+  PlaybackSessionSnapshot? _lastPlaybackState;
+
+  @override
+  Future<Result<void, Failure>> saveLastPlaybackState(
+    PlaybackSessionSnapshot snapshot,
+  ) async {
+    _lastPlaybackState = snapshot;
+    return const Result.success(null);
+  }
+
+  @override
+  Future<Result<PlaybackSessionSnapshot?, Failure>>
+  getLastPlaybackState() async {
+    return Result.success(_lastPlaybackState);
   }
 }

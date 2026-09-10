@@ -74,4 +74,20 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
     }
     return Result.failure(NotFoundFailure('no local track with id $trackId'));
   }
+
+  /// Track ids [sourceExists] should report as missing — set this to
+  /// simulate a linked folder's file having been deleted/moved since it
+  /// was last scanned. Everything else this fake still knows about
+  /// (see [getSourcePath]) reports as existing.
+  final Set<String> missingTrackIds = {};
+
+  @override
+  Future<Result<bool, Failure>> sourceExists(String trackId) async {
+    if (missingTrackIds.contains(trackId)) return const Result.success(false);
+    final pathResult = await getSourcePath(trackId);
+    return switch (pathResult) {
+      Success() => const Result.success(true),
+      ResultFailure() => const Result.success(false),
+    };
+  }
 }

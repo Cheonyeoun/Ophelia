@@ -111,7 +111,7 @@ class _GlassCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const CoverArt(size: 48),
+                CoverArt(size: 48, label: title),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

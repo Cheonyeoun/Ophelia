@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
@@ -43,6 +44,53 @@ void main() {
         final rows = await db.select(db.linkedFolders).get();
 
         expect(rows.map((r) => r.path), ['/music']);
+      } finally {
+        await db.close();
+      }
+    },
+  );
+
+  test(
+    'reopening a pre-existing v2 database creates playback_session and '
+    'playback_queue_entries via onUpgrade, instead of leaving them missing '
+    '(session-restore-on-startup feature)',
+    () async {
+      final executor = NativeDatabase.memory(
+        setup: (rawDb) => rawDb.execute('PRAGMA user_version = 2'),
+      );
+      final db = OpheliaDatabase(executor);
+
+      try {
+        await db
+            .into(db.playbackSession)
+            .insert(
+              PlaybackSessionCompanion.insert(
+                id: const Value(1),
+                queueIndex: 0,
+                positionMs: 0,
+                savedAt: DateTime.now(),
+              ),
+            );
+        await db
+            .into(db.playbackQueueEntries)
+            .insert(
+              PlaybackQueueEntriesCompanion.insert(
+                sessionId: 1,
+                position: 0,
+                trackId: 't1',
+                title: 'Title',
+                artist: 'Artist',
+                album: 'Album',
+                durationMs: 1000,
+                sourceType: 'streamed',
+              ),
+            );
+
+        final sessionRows = await db.select(db.playbackSession).get();
+        final entryRows = await db.select(db.playbackQueueEntries).get();
+
+        expect(sessionRows, hasLength(1));
+        expect(entryRows.map((e) => e.trackId), ['t1']);
       } finally {
         await db.close();
       }

@@ -119,3 +119,42 @@ class LinkedFolders extends Table {
   @override
   Set<Column> get primaryKey => {path};
 }
+
+/// The last playback session to restore on app startup (see
+/// `core/usecases/restore_last_session.dart`) — a singleton table, the
+/// same pattern as [Profile]: exactly one row, always at
+/// [DriftLibraryAdapter.playbackSessionRowId], upserted atomically rather
+/// than checked-then-inserted-or-updated. [queueIndex]/[positionMs]
+/// describe where the session was; the actual queue contents live in
+/// [PlaybackQueueEntries], keyed back to this row by [id].
+class PlaybackSession extends Table {
+  IntColumn get id => integer()();
+  IntColumn get queueIndex => integer()();
+  IntColumn get positionMs => integer()();
+  DateTimeColumn get savedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One track in the saved session's queue, in [position] order. Each
+/// entry is a full, self-contained snapshot of the track (not a foreign
+/// key into `cached_tracks`, which only ever holds thin placeholder rows
+/// — see that table's own doc comment) so a saved session never depends
+/// on any other table still agreeing with it. [sourceType] is
+/// [TrackSourceType.name], parsed back via `.values.byName` — see
+/// [DriftLibraryAdapter.getLastPlaybackState].
+@TableIndex(name: 'playback_queue_entries_session_id', columns: {#sessionId})
+class PlaybackQueueEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get sessionId =>
+      integer().references(PlaybackSession, #id, onDelete: KeyAction.cascade)();
+  IntColumn get position => integer()();
+  TextColumn get trackId => text()();
+  TextColumn get title => text()();
+  TextColumn get artist => text()();
+  TextColumn get album => text()();
+  IntColumn get durationMs => integer()();
+  TextColumn get coverArtPath => text().nullable()();
+  TextColumn get sourceType => text()();
+}

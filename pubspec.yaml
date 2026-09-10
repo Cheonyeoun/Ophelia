@@ -43,6 +43,7 @@ dependencies:
   just_audio: ^0.10.6
   audio_service: ^0.18.19
   file_picker: ^12.2.0
+  permission_handler: ^11.3.1
   path: ^1.9.1
   meta: ^1.18.3
 

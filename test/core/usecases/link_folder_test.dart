@@ -40,6 +40,10 @@ class _LinkFailingSource implements LocalFileSourcePort {
   @override
   Future<Result<String, Failure>> getSourcePath(String trackId) =>
       inner.getSourcePath(trackId);
+
+  @override
+  Future<Result<bool, Failure>> sourceExists(String trackId) =>
+      inner.sourceExists(trackId);
 }
 
 void main() {
@@ -120,5 +124,9 @@ class _FailingPickSource implements LocalFileSourcePort {
 
   @override
   Future<Result<String, Failure>> getSourcePath(String trackId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Result<bool, Failure>> sourceExists(String trackId) =>
       throw UnimplementedError();
 }

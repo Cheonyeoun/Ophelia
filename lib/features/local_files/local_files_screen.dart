@@ -1,28 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../../app/layout_metrics.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../app/widgets/screen_top_bar.dart';
 import '../../app/widgets/track_row.dart';
+import '../../core/error/failure.dart';
 import '../../core/error/result.dart';
 import '../playback_ui/playback_controller.dart';
 
 /// A linked folder's `path` (from [LocalFileSourcePort.getLinkedFolders])
-/// is what this screen shows for it -- fine on Android/desktop, where
-/// it's a real filesystem path, but on iOS it's the synthetic
-/// `ios-files:`-prefixed, newline-joined set of individually-picked file
-/// paths (see `LocalFileSourceAdapter`'s doc comment) which would
-/// otherwise render as that raw, multi-line identifier. This picks a
-/// human-readable label instead: the file count for an iOS file set, the
-/// path itself for anything else.
-String _displayLabelFor(String path) {
+/// split into what [_LinkedFolderSection] actually shows for it: a short,
+/// legible [primary] label plus an optional dimmer [secondary] line for
+/// the rest -- the raw absolute path Android/desktop returns (e.g.
+/// `/storage/emulated/0/Recordings/Record`) is exactly the kind of thing
+/// that reads as noise crammed into one line, when the folder's own name
+/// (`Record`) is what actually identifies it at a glance. On iOS, where
+/// [path] is instead the synthetic `ios-files:`-prefixed, newline-joined
+/// set of individually-picked file paths (see `LocalFileSourceAdapter`'s
+/// doc comment), [primary] is a file count and there is no [secondary].
+({String primary, String? secondary}) _folderLabelFor(String path) {
   const iosPrefix = 'ios-files:';
-  if (!path.startsWith(iosPrefix)) return path;
-  final count =
-      path.substring(iosPrefix.length).split('\n').where((p) => p.isNotEmpty).length;
-  return '$count file${count == 1 ? '' : 's'} selected';
+  if (path.startsWith(iosPrefix)) {
+    final count = path
+        .substring(iosPrefix.length)
+        .split('\n')
+        .where((p) => p.isNotEmpty)
+        .length;
+    return (primary: '$count file${count == 1 ? '' : 's'} selected', secondary: null);
+  }
+  final name = p.basename(path);
+  final parent = p.dirname(path);
+  // A basename of '' (path was itself '/' or similar) or a dirname with
+  // nothing meaningful in it ('.', '/') isn't worth showing as a second
+  // line -- fall back to the full path as the primary label instead.
+  if (name.isEmpty) return (primary: path, secondary: null);
+  final showParent = parent != '.' && parent != p.separator;
+  return (primary: name, secondary: showParent ? parent : null);
 }
 
 /// Local Files — pushed from Library, no nav bar, mini-player still
@@ -49,11 +65,20 @@ class LocalFilesScreen extends ConsumerWidget {
           tooltip: 'Add folder',
           onPressed: () async {
             final result = await ref.read(linkFolderProvider)();
-            // A `null` value means the user cancelled the picker, not a
-            // failure -- see LinkFolder's own doc comment.
-            if (result case Success(value: final path?)) {
-              ref.invalidate(linkedFoldersProvider);
-              ref.invalidate(localFolderTracksProvider(path));
+            switch (result) {
+              // A `null` value means the user cancelled the picker, not a
+              // failure -- see LinkFolder's own doc comment.
+              case Success(value: final path?):
+                ref.invalidate(linkedFoldersProvider);
+                ref.invalidate(localFolderTracksProvider(path));
+              case Success(value: null):
+                break;
+              case ResultFailure(failure: final f):
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(f.message)),
+                  );
+                }
             }
           },
         ),
@@ -88,6 +113,11 @@ class _LinkedFolderSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tracks = ref.watch(localFolderTracksProvider(path));
+    final label = _folderLabelFor(path);
+    final trackCount = tracks.maybeWhen(
+      data: (data) => data.length,
+      orElse: () => null,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,14 +133,47 @@ class _LinkedFolderSection extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  _displayLabelFor(path),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.paleDim,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            label.primary,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.pale,
+                            ),
+                          ),
+                        ),
+                        if (trackCount != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '· $trackCount track${trackCount == 1 ? '' : 's'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.mist,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (label.secondary != null)
+                      Text(
+                        label.secondary!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.mist,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               IconButton(
@@ -152,7 +215,13 @@ class _LinkedFolderSection extends ConsumerWidget {
                       ),
                   ],
                 ),
-          error: (error, stack) => const SizedBox.shrink(),
+          error: (error, stack) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text(
+              error is Failure ? error.message : "Couldn't read this folder",
+              style: const TextStyle(fontSize: 12, color: AppColors.mist),
+            ),
+          ),
           loading: () => const Padding(
             padding: EdgeInsets.all(20),
             child: Center(child: CircularProgressIndicator()),

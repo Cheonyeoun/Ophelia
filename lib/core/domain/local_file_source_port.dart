@@ -55,4 +55,12 @@ abstract interface class LocalFileSourcePort {
   /// kinds (see play_track.dart). Fails with [NotFoundFailure] for any
   /// id this port didn't produce.
   Future<Result<String, Failure>> getSourcePath(String trackId);
+
+  /// Whether [trackId]'s underlying file is still there right now — for
+  /// `RestoreLastSession` to check before restoring a saved session built
+  /// around a local track, since the folder it came from may have been
+  /// unlinked, moved, or deleted (e.g. a removable SD card, or a linked
+  /// folder that no longer exists) since the session was saved. `false`
+  /// for any id this port didn't produce, same as [getSourcePath].
+  Future<Result<bool, Failure>> sourceExists(String trackId);
 }

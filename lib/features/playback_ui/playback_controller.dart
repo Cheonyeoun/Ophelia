@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/domain/playback_session_snapshot.dart';
 import '../../core/domain/playback_state.dart';
 import '../../core/domain/playlist.dart';
 import '../../core/domain/track.dart';
@@ -18,15 +19,15 @@ class PlaybackUiState {
   const PlaybackUiState({required this.playback, required this.isPlaying});
 
   factory PlaybackUiState.initial() => PlaybackUiState(
-        playback: PlaybackState(
-          position: Duration.zero,
-          queue: const [],
-          isImmersive: false,
-          repeatMode: RepeatMode.off,
-          shuffle: false,
-        ),
-        isPlaying: false,
-      );
+    playback: PlaybackState(
+      position: Duration.zero,
+      queue: const [],
+      isImmersive: false,
+      repeatMode: RepeatMode.off,
+      shuffle: false,
+    ),
+    isPlaying: false,
+  );
 
   PlaybackUiState copyWith({PlaybackState? playback, bool? isPlaying}) {
     return PlaybackUiState(
@@ -80,38 +81,132 @@ class _AsyncMutex {
 class PlaybackController extends Notifier<PlaybackUiState> {
   final _mutex = _AsyncMutex();
 
-  /// Guards [_ensurePositionStreamSubscribed] so the engine's
-  /// `positionStream` is subscribed to at most once per controller
-  /// lifetime, the first time anything actually plays -- not eagerly in
-  /// [build], which would touch `playbackEngineProvider` (and, with the
-  /// real adapter, `just_audio`/`audio_service`'s platform channels) just
-  /// from mounting the app, before the user ever presses play.
-  bool _positionStreamSubscribed = false;
+  /// Guards [_ensureEngineStreamsSubscribed] so the engine's
+  /// `positionStream`/`durationStream` are subscribed to at most once per
+  /// controller lifetime, the first time anything actually plays -- not
+  /// eagerly in [build], which would touch `playbackEngineProvider` (and,
+  /// with the real adapter, `just_audio`/`audio_service`'s platform
+  /// channels) just from mounting the app, before the user ever presses
+  /// play.
+  bool _engineStreamsSubscribed = false;
+
+  /// Set by [restoreSession] and cleared once [togglePlayPause] actually
+  /// loads that track into the engine — see both methods' doc comments
+  /// for why a restored session needs a fresh [_play] rather than
+  /// [_resume] the first time it's played.
+  PlaybackSessionSnapshot? _pendingRestore;
 
   @override
   PlaybackUiState build() => PlaybackUiState.initial();
+
+  /// Populates the mini-player with [snapshot] — the track, queue, and
+  /// position `RestoreLastSession` found saved from last time — paused,
+  /// without touching the playback engine at all. The engine is only
+  /// ever given a track via [_play] (which starts loading it for real),
+  /// so there is nothing to "resume" yet; the first [togglePlayPause]
+  /// after this loads the track fresh and seeks to [snapshot]'s position,
+  /// rather than assuming the engine already has it queued up the way a
+  /// plain pause/resume cycle would.
+  void restoreSession(PlaybackSessionSnapshot snapshot) {
+    _pendingRestore = snapshot;
+    state = state.copyWith(
+      playback: state.playback.copyWith(
+        currentTrack: snapshot.currentTrack,
+        currentIndex: snapshot.queueIndex,
+        position: snapshot.position,
+        queue: snapshot.queue,
+      ),
+      isPlaying: false,
+    );
+  }
+
+  /// Saves the current track/queue/position as the session to restore next
+  /// startup — called from the app's lifecycle observer (see main.dart)
+  /// when the app is backgrounded, which is the point at which the app is
+  /// actually at risk of being killed outright before a clean shutdown
+  /// could save anything. A no-op with nothing loaded. Deliberately not
+  /// run through [_mutex]: it only reads [state], never mutates it, so it
+  /// can't race with anything else here the way the mutating methods
+  /// above can.
+  Future<void> persistSessionSnapshot() async {
+    final track = state.playback.currentTrack;
+    if (track == null) return;
+    await ref.read(saveLastPlaybackStateProvider)(
+      PlaybackSessionSnapshot(
+        queue: state.playback.queue,
+        queueIndex: state.playback.currentIndex.clamp(
+          0,
+          state.playback.queue.length - 1,
+        ),
+        position: state.playback.position,
+      ),
+    );
+  }
 
   /// Subscribes once to the engine's continuous position stream (see
   /// `PlaybackEnginePort.positionStream`), mirroring each update onto
   /// `PlaybackState.position` — the real-playback equivalent of the
   /// discrete position snapshots [_play]/[_seekBy]/[_seekTo]/[_skipNext]/
-  /// [_skipPrevious] already set on their own. Deliberately outside
-  /// [_mutex]: this only ever narrows `position`, so there's nothing for
-  /// it to race with, and gating it on the mutex would mean a position
-  /// update queued behind an in-flight seek/skip could momentarily show a
-  /// stale value instead of the engine's actual current one.
-  void _ensurePositionStreamSubscribed() {
-    if (_positionStreamSubscribed) return;
-    _positionStreamSubscribed = true;
-    final subscription = ref
-        .read(playbackEngineProvider)
-        .positionStream
-        .listen((position) {
+  /// [_skipPrevious] already set on their own — and to its duration
+  /// stream (`PlaybackEnginePort.durationStream`), refining
+  /// `currentTrack.durationMs` once the engine reports a real value. That
+  /// second part matters for any track whose domain metadata doesn't
+  /// already carry a real duration — a local file always starts at `0`
+  /// ("not known"; see `LocalFileSourceAdapter`'s doc comment) until this
+  /// fills it in, which the ±10s seek buttons and the scrubber both
+  /// depend on to do anything at all (see
+  /// [_clampToTrackDuration]/`PlaybackScrubber`'s own duration handling).
+  ///
+  /// Deliberately outside [_mutex]: both streams only ever narrow
+  /// `position`/`currentTrack.durationMs` from data the engine itself
+  /// reports, so there's nothing for either to race with, and gating them
+  /// on the mutex would mean an update queued behind an in-flight
+  /// seek/skip could momentarily show a stale value instead of the
+  /// engine's actual current one.
+  void _ensureEngineStreamsSubscribed() {
+    if (_engineStreamsSubscribed) return;
+    _engineStreamsSubscribed = true;
+    final engine = ref.read(playbackEngineProvider);
+
+    final positionSubscription = engine.positionStream.listen((position) {
       state = state.copyWith(
         playback: state.playback.copyWith(position: position),
       );
     });
-    ref.onDispose(subscription.cancel);
+    ref.onDispose(positionSubscription.cancel);
+
+    final durationSubscription = engine.durationStream.listen((duration) {
+      if (duration == null) return;
+      final track = state.playback.currentTrack;
+      if (track == null || track.durationMs == duration.inMilliseconds) {
+        return;
+      }
+      final refined = track.copyWith(durationMs: duration.inMilliseconds);
+      final queue = state.playback.queue;
+      final index = state.playback.currentIndex;
+      // `currentTrack` and `queue[currentIndex]` are separate fields (see
+      // PlaybackState's own doc comment) -- refining only the former left
+      // the latter permanently stuck at its original (often 0/"unknown")
+      // duration. That queue is exactly what `persistSessionSnapshot`
+      // saves, so a since-learned real duration was silently lost across
+      // every session restore, and the Queue screen would keep showing
+      // the stale value too. Located by index, not value, for the same
+      // reason `currentIndex` exists at all: a duplicate track elsewhere
+      // in the queue must not also get rewritten.
+      final refinedQueue = index >= 0 && index < queue.length
+          ? [
+              for (final (i, entry) in queue.indexed)
+                i == index ? refined : entry,
+            ]
+          : queue;
+      state = state.copyWith(
+        playback: state.playback.copyWith(
+          currentTrack: refined,
+          queue: refinedQueue,
+        ),
+      );
+    });
+    ref.onDispose(durationSubscription.cancel);
   }
 
   /// Plays [track]. When [queue] is given, it becomes the active queue —
@@ -123,9 +218,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// passed through rather than re-derived by searching the queue for a
   /// value-equal track (see core/domain/playback_engine_port.dart).
   Future<void> play(Track track, {List<Track>? queue, int queueIndex = 0}) {
-    return _mutex.run(
-      () => _play(track, queue: queue, queueIndex: queueIndex),
-    );
+    return _mutex.run(() => _play(track, queue: queue, queueIndex: queueIndex));
   }
 
   Future<void> _play(
@@ -141,7 +234,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     );
     if (result case ResultFailure()) return;
 
-    _ensurePositionStreamSubscribed();
+    _ensureEngineStreamsSubscribed();
     state = state.copyWith(
       playback: state.playback.copyWith(
         currentTrack: track,
@@ -187,31 +280,73 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     if (track == null) return;
     final result = await ref.read(resumeTrackProvider)(track);
     if (result case ResultFailure()) return;
-    _ensurePositionStreamSubscribed();
+    _ensureEngineStreamsSubscribed();
     state = state.copyWith(isPlaying: true);
   }
 
   /// Delegates to the already-serialized [pause]/[resume] — see
   /// [playPlaylist] for why this itself isn't also wrapped in the mutex.
+  /// A pending restored session (see [restoreSession]) is handled as its
+  /// own case: the engine has nothing loaded for it yet, so this loads it
+  /// fresh via [_play] and seeks to the saved position, rather than
+  /// [resume] — which would try to resume a track the engine was never
+  /// given in the first place.
   Future<void> togglePlayPause() async {
     if (state.isPlaying) {
       await pause();
+    } else if (_pendingRestore case final snapshot?) {
+      await _mutex.run(() => _resumeFromRestore(snapshot));
     } else if (state.playback.currentTrack != null) {
       await resume();
     }
   }
 
-  Future<void> skipNext() => _mutex.run(_skipNext);
+  Future<void> _resumeFromRestore(PlaybackSessionSnapshot snapshot) async {
+    await _play(
+      snapshot.currentTrack,
+      queue: snapshot.queue,
+      queueIndex: snapshot.queueIndex,
+    );
+    _pendingRestore = null;
+    await _seekTo(snapshot.position);
+  }
+
+  /// Guards [skipNext]/[skipPrevious] against piling up behind each
+  /// other -- confirmed on a real device against a queue of real (non-
+  /// trivial to decode) audio files: each skip's full round trip
+  /// (resolving the new track's source, handing it to `just_audio`,
+  /// starting playback) is genuinely slow enough that a few impatient
+  /// taps queue up several skips deep in [_mutex] before the first has
+  /// even resolved. The mutex still correctly processes every one of
+  /// them in order -- nothing is dropped or corrupted -- but from the
+  /// screen, a run of taps that all land while one is still in flight
+  /// looks and feels exactly like the button stopped responding, then
+  /// suddenly jumped several tracks at once when the backlog finally
+  /// drained. Silently ignoring a tap that arrives while one is already
+  /// in flight, rather than queuing it, keeps every tap that actually
+  /// does something visibly immediate.
+  bool _skipInFlight = false;
+
+  Future<void> skipNext() async {
+    if (_skipInFlight) return;
+    _skipInFlight = true;
+    try {
+      await _mutex.run(_skipNext);
+    } finally {
+      _skipInFlight = false;
+    }
+  }
 
   Future<void> _skipNext() async {
     final result = await ref.read(skipNextProvider)();
     switch (result) {
       case Success(value: final track):
-        _ensurePositionStreamSubscribed();
+        _ensureEngineStreamsSubscribed();
+        final index = ref.read(playbackEngineProvider).currentIndex;
         state = state.copyWith(
           playback: state.playback.copyWith(
-            currentTrack: track,
-            currentIndex: ref.read(playbackEngineProvider).currentIndex,
+            currentTrack: _withKnownDuration(track, index),
+            currentIndex: index,
             position: Duration.zero,
           ),
           isPlaying: true,
@@ -221,17 +356,26 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     }
   }
 
-  Future<void> skipPrevious() => _mutex.run(_skipPrevious);
+  Future<void> skipPrevious() async {
+    if (_skipInFlight) return;
+    _skipInFlight = true;
+    try {
+      await _mutex.run(_skipPrevious);
+    } finally {
+      _skipInFlight = false;
+    }
+  }
 
   Future<void> _skipPrevious() async {
     final result = await ref.read(skipPreviousProvider)();
     switch (result) {
       case Success(value: final track):
-        _ensurePositionStreamSubscribed();
+        _ensureEngineStreamsSubscribed();
+        final index = ref.read(playbackEngineProvider).currentIndex;
         state = state.copyWith(
           playback: state.playback.copyWith(
-            currentTrack: track,
-            currentIndex: ref.read(playbackEngineProvider).currentIndex,
+            currentTrack: _withKnownDuration(track, index),
+            currentIndex: index,
             position: Duration.zero,
           ),
           isPlaying: true,
@@ -239,6 +383,31 @@ class PlaybackController extends Notifier<PlaybackUiState> {
       case ResultFailure():
         return;
     }
+  }
+
+  /// [track] just came back from [PlaybackEnginePort.skipNext]/
+  /// [PlaybackEnginePort.skipPrevious] -- resolved from the *engine's own*
+  /// internal queue, a separate copy from [PlaybackState.queue] (see that
+  /// class's own doc comment) that [_ensureEngineStreamsSubscribed]'s
+  /// duration-refinement listener never touches. Landing back on a track
+  /// whose real duration was already learned earlier this session --
+  /// simply by skipping to it again -- would otherwise regress it to
+  /// `durationMs: 0` ("unknown"), showing `--:--` for a track this same
+  /// session already knows the real length of. [state.playback.queue] is
+  /// refined in place by that listener, so it's the more current of the
+  /// two wherever they disagree; [index] (the engine's own authoritative
+  /// position, matching `currentIndex`'s doc comment) is what locates the
+  /// corresponding entry, not [track]'s value, for the same reason
+  /// `currentIndex` exists at all -- a duplicate track elsewhere in the
+  /// queue must not be consulted instead.
+  Track _withKnownDuration(Track track, int index) {
+    if (track.durationMs != 0) return track;
+    final queue = state.playback.queue;
+    if (index < 0 || index >= queue.length) return track;
+    final knownDurationMs = queue[index].durationMs;
+    return knownDurationMs == 0
+        ? track
+        : track.copyWith(durationMs: knownDurationMs);
   }
 
   /// Seeks [offset] relative to the current position — used by the ±10s
@@ -290,10 +459,21 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// [_seekTo] so neither can leave `position` negative or past the end
   /// of the track, which would otherwise show nonsensical values like a
   /// position greater than the duration next to it.
+  ///
+  /// A `durationMs` of exactly `0` is never a real track's actual length —
+  /// it's `LocalFileSourceAdapter`'s "duration not known" sentinel (no tag
+  /// reader exists to read a local file's real duration — see that
+  /// class's own doc comment). Enforcing an upper bound of zero there
+  /// would clamp *every* seek target straight back to the start, making
+  /// both the ±10s buttons and the scrubber permanently stuck at 0:00 for
+  /// any local track — indistinguishable from seeking being broken
+  /// outright. So an unknown duration skips the upper-bound clamp
+  /// entirely instead, and leaves it to the engine (which knows the
+  /// file's real length once loaded) to bound the seek.
   Duration _clampToTrackDuration(Duration target) {
     var clamped = target < Duration.zero ? Duration.zero : target;
     final track = state.playback.currentTrack;
-    if (track != null) {
+    if (track != null && track.durationMs > 0) {
       final trackDuration = Duration(milliseconds: track.durationMs);
       if (clamped > trackDuration) clamped = trackDuration;
     }
@@ -357,5 +537,5 @@ class PlaybackController extends Notifier<PlaybackUiState> {
 
 final playbackControllerProvider =
     NotifierProvider<PlaybackController, PlaybackUiState>(
-  PlaybackController.new,
-);
+      PlaybackController.new,
+    );

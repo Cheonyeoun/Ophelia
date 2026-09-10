@@ -113,6 +113,84 @@ void main() {
 
       expect(tracks, isEmpty);
     });
+
+    test(
+      'recognizes voice/call-recorder formats (.amr, .3gp), not just '
+      'typical music formats -- a real folder full of these used to scan '
+      'clean and report "no audio files found"',
+      () async {
+        await File(p.join(tempDir.path, 'memo.amr')).create();
+        await File(p.join(tempDir.path, 'call.3gp')).create();
+
+        final tracks = unwrapValue(await adapter.scanFolder(tempDir.path));
+
+        expect(tracks.map((t) => t.title), containsAll(['memo', 'call']));
+      },
+    );
+  });
+
+  group('scanFolder permission handling', () {
+    late Directory tempDir;
+    late OpheliaDatabase database;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('ophelia_scan_test');
+      database = OpheliaDatabase(NativeDatabase.memory());
+    });
+
+    tearDown(() async {
+      await database.close();
+      await tempDir.delete(recursive: true);
+    });
+
+    test(
+      'fails with PermissionFailure, not an empty success, when the '
+      'injected permission check reports denial -- a denied permission '
+      'must surface as a real failure, never look like "no audio files '
+      'here"',
+      () async {
+        await File(p.join(tempDir.path, 'song.mp3')).create();
+        final adapter = LocalFileSourceAdapter(
+          database,
+          ensureAudioPermission: () async => false,
+        );
+
+        final failure = unwrapFailure(await adapter.scanFolder(tempDir.path));
+
+        expect(failure, isA<PermissionFailure>());
+      },
+    );
+
+    test(
+      'scans normally once the injected permission check reports granted',
+      () async {
+        await File(p.join(tempDir.path, 'song.mp3')).create();
+        final adapter = LocalFileSourceAdapter(
+          database,
+          ensureAudioPermission: () async => true,
+        );
+
+        final tracks = unwrapValue(await adapter.scanFolder(tempDir.path));
+
+        expect(tracks, hasLength(1));
+      },
+    );
+
+    test(
+      'pickFolder fails with PermissionFailure when the injected '
+      'permission check reports denial, without ever reaching the '
+      'platform folder picker',
+      () async {
+        final adapter = LocalFileSourceAdapter(
+          database,
+          ensureAudioPermission: () async => false,
+        );
+
+        final failure = unwrapFailure(await adapter.pickFolder());
+
+        expect(failure, isA<PermissionFailure>());
+      },
+    );
   });
 
   group('linked folders', () {

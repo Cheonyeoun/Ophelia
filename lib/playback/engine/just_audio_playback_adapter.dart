@@ -189,4 +189,12 @@ class JustAudioPlaybackAdapter implements PlaybackEnginePort {
       (handler) => handler.positionStream,
     );
   }
+
+  @override
+  Stream<Duration?> get durationStream {
+    if (_resolvedHandler != null) return _resolvedHandler!.durationStream;
+    return Stream.fromFuture(_handler).asyncExpand(
+      (handler) => handler.durationStream,
+    );
+  }
 }

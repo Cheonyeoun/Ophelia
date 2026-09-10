@@ -32,6 +32,14 @@ const double kMiniPlayerHeight = 56;
 /// doesn't depend on content/font metrics, so it doesn't need measuring.
 const double kMiniPlayerGap = 8;
 
+/// The floating bubble's diameter, once the mini-player is hidden via its
+/// swipe-down sheet — see lib/app/widgets/floating_player_bubble.dart.
+const double kBubbleSize = 48;
+
+/// The minimum gap kept between the bubble and the visible screen edges it
+/// snaps to.
+const double kBubbleMargin = 12;
+
 ThemeData buildAppTheme() {
   final base = ThemeData.dark(useMaterial3: true);
   final fraunces = GoogleFonts.frauncesTextTheme(base.textTheme);

@@ -27,7 +27,7 @@ class TrackRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
         child: Row(
           children: [
-            const CoverArt(size: 44),
+            CoverArt(size: 44, label: title),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
