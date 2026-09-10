@@ -1,6 +1,7 @@
 import '../error/failure.dart';
 import '../error/result.dart';
 import 'listening_event.dart';
+import 'playback_session_snapshot.dart';
 import 'playlist.dart';
 import 'user_profile.dart';
 
@@ -27,4 +28,18 @@ abstract interface class LocalLibraryPort {
   Future<Result<void, Failure>> recordListeningEvent(ListeningEvent event);
 
   Future<Result<List<ListeningEvent>, Failure>> getListeningEvents();
+
+  /// Persists [snapshot] as the session to restore on the next app
+  /// startup (see `core/usecases/restore_last_session.dart`), replacing
+  /// whatever was saved before — there is only ever one "last" session.
+  Future<Result<void, Failure>> saveLastPlaybackState(
+    PlaybackSessionSnapshot snapshot,
+  );
+
+  /// The most recently saved session, or a `null` value (not a
+  /// [Failure]) when nothing has ever been saved — a fresh install, or a
+  /// user who has never played anything, is a normal, expected state for
+  /// `RestoreLastSession` to see at every startup, not something to
+  /// surface as an error.
+  Future<Result<PlaybackSessionSnapshot?, Failure>> getLastPlaybackState();
 }

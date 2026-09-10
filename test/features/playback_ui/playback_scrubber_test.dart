@@ -628,4 +628,43 @@ void main() {
       handle.dispose();
     },
   );
+
+  testWidgets(
+    'the increase semantics action still steps forward when the track\'s '
+    'duration is unknown (0) -- e.g. a local file with no tag reader --  '
+    'instead of clamping every step back to zero',
+    (tester) async {
+      final seeks = <Duration>[];
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        wrap(
+          PlaybackScrubber(
+            trackId: 'track-1',
+            position: const Duration(seconds: 5),
+            duration: Duration.zero,
+            onSeek: seeks.add,
+          ),
+        ),
+      );
+
+      final semanticsOwner =
+          tester.binding.renderViews.single.owner!.semanticsOwner!;
+      final nodeId = tester.getSemantics(find.byType(PlaybackScrubber)).id;
+
+      semanticsOwner.performAction(nodeId, SemanticsAction.increase);
+      await tester.pump();
+
+      // A 10s step forward from wherever the (fraction-based, and so
+      // always 0 when duration is unknown -- a separate, narrower quirk
+      // than the one this test covers) display position starts. The
+      // point being verified here is the upper bound: with a real
+      // duration this would clamp back to 0 immediately (see the
+      // decrease-three-times case above); with an unknown one it must
+      // not.
+      expect(seeks, [const Duration(seconds: 10)]);
+
+      handle.dispose();
+    },
+  );
 }

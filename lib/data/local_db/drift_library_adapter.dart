@@ -3,7 +3,9 @@ import 'package:sqlite3/common.dart' show SqliteException;
 
 import '../../core/domain/listening_event.dart' as domain;
 import '../../core/domain/local_library_port.dart';
+import '../../core/domain/playback_session_snapshot.dart';
 import '../../core/domain/playlist.dart' as domain;
+import '../../core/domain/track.dart';
 import '../../core/domain/user_profile.dart';
 import '../../core/error/failure.dart';
 import '../../core/error/result.dart';
@@ -39,6 +41,10 @@ class DriftLibraryAdapter implements LocalLibraryPort {
   /// happens to already be there," is what makes [saveProfile] an atomic
   /// upsert instead of a racy check-then-insert-or-update.
   static const profileRowId = 1;
+
+  /// The one and only `playback_session` row's fixed id -- same reasoning
+  /// as [profileRowId], for the same kind of singleton row.
+  static const playbackSessionRowId = 1;
 
   /// Ensures a placeholder `cached_tracks` row exists for [trackId], so
   /// that inserting a `playlist_tracks`/`listening_events` row
@@ -290,6 +296,103 @@ class DriftLibraryAdapter implements LocalLibraryPort {
             msPlayed: row.msPlayed,
           ),
       ]);
+    } on SqliteException catch (e) {
+      return Result.failure(StorageFailure(e.message));
+    }
+  }
+
+  @override
+  Future<Result<void, Failure>> saveLastPlaybackState(
+    PlaybackSessionSnapshot snapshot,
+  ) async {
+    try {
+      await _db.transaction(() async {
+        await _db
+            .into(_db.playbackSession)
+            .insertOnConflictUpdate(
+              PlaybackSessionCompanion(
+                id: const Value(playbackSessionRowId),
+                queueIndex: Value(snapshot.queueIndex),
+                positionMs: Value(snapshot.position.inMilliseconds),
+                savedAt: Value(DateTime.now()),
+              ),
+            );
+
+        // Replaced wholesale on every save, the same way `savePlaylist`
+        // replaces `playlist_tracks` -- there is only ever one saved
+        // session, so there is no meaningful "diff" between the old
+        // queue and the new one to preserve.
+        await (_db.delete(_db.playbackQueueEntries)
+              ..where((e) => e.sessionId.equals(playbackSessionRowId)))
+            .go();
+
+        await _db.batch((b) {
+          b.insertAll(_db.playbackQueueEntries, [
+            for (final (index, track) in snapshot.queue.indexed)
+              PlaybackQueueEntriesCompanion.insert(
+                sessionId: playbackSessionRowId,
+                position: index,
+                trackId: track.id,
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                durationMs: track.durationMs,
+                coverArtPath: Value(track.coverArtPath),
+                sourceType: track.sourceType.name,
+              ),
+          ]);
+        });
+      });
+      return const Result.success(null);
+    } on SqliteException catch (e) {
+      return Result.failure(StorageFailure(e.message));
+    }
+  }
+
+  @override
+  Future<Result<PlaybackSessionSnapshot?, Failure>>
+  getLastPlaybackState() async {
+    try {
+      final sessionRow = await (_db.select(
+        _db.playbackSession,
+      )..where((s) => s.id.equals(playbackSessionRowId))).getSingleOrNull();
+      if (sessionRow == null) return const Result.success(null);
+
+      final entryRows =
+          await (_db.select(_db.playbackQueueEntries)
+                ..where((e) => e.sessionId.equals(playbackSessionRowId))
+                ..orderBy([(e) => OrderingTerm(expression: e.position)]))
+              .get();
+      if (entryRows.isEmpty) return const Result.success(null);
+
+      final queue = [
+        for (final row in entryRows)
+          Track(
+            id: row.trackId,
+            title: row.title,
+            artist: row.artist,
+            album: row.album,
+            durationMs: row.durationMs,
+            coverArtPath: row.coverArtPath,
+            sourceType: TrackSourceType.values.byName(row.sourceType),
+          ),
+      ];
+      // Bounds-checked rather than trusted: a queue index saved against a
+      // since-shrunk queue (there is no realistic path to that today, but
+      // nothing above rules it out for a future change) falls back to the
+      // first track instead of throwing a RangeError trying to restore.
+      final queueIndex = sessionRow.queueIndex >= 0 &&
+              sessionRow.queueIndex < queue.length
+          ? sessionRow.queueIndex
+          : 0;
+
+      return Result.success(
+        PlaybackSessionSnapshot(
+          queue: queue,
+          queueIndex: queueIndex,
+          position: Duration(milliseconds: sessionRow.positionMs),
+        ),
+      );
     } on SqliteException catch (e) {
       return Result.failure(StorageFailure(e.message));
     }

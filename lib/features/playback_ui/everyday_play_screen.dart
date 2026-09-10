@@ -87,7 +87,12 @@ class EverydayPlayScreen extends ConsumerWidget {
                           controller.toggleImmersive();
                           context.push('/immersive-play');
                         },
-                        child: CoverArt(size: coverSize, borderRadius: 16),
+                        child: CoverArt(
+                          size: coverSize,
+                          borderRadius: 16,
+                          label: track.title,
+                          gradient: true,
+                        ),
                       ),
                       SizedBox(height: gap(22)),
                       Text(
@@ -121,7 +126,7 @@ class EverydayPlayScreen extends ConsumerWidget {
                               style: const TextStyle(fontSize: 10, color: AppColors.mist),
                             ),
                             Text(
-                              formatPlaybackDuration(
+                              formatTrackDuration(
                                 Duration(milliseconds: track.durationMs),
                               ),
                               style: const TextStyle(fontSize: 10, color: AppColors.mist),

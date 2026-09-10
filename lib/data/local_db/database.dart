@@ -20,6 +20,8 @@ part 'database.g.dart';
     Profile,
     Downloads,
     LinkedFolders,
+    PlaybackSession,
+    PlaybackQueueEntries,
   ],
 )
 class OpheliaDatabase extends _$OpheliaDatabase {
@@ -60,7 +62,7 @@ class OpheliaDatabase extends _$OpheliaDatabase {
       );
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -74,6 +76,13 @@ class OpheliaDatabase extends _$OpheliaDatabase {
           // installed before this table existed.
           if (from < 2) {
             await m.createTable(linkedFolders);
+          }
+          // v2 -> v3: added `playback_session`/`playback_queue_entries`
+          // (session-restore-on-startup feature) -- same reasoning as the
+          // v1 -> v2 step above.
+          if (from < 3) {
+            await m.createTable(playbackSession);
+            await m.createTable(playbackQueueEntries);
           }
         },
         beforeOpen: (details) async {

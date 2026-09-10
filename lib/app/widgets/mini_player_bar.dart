@@ -39,7 +39,21 @@ class MiniPlayerBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const CoverArt(size: 32, borderRadius: 6),
+              // Keyed by track id so a skip (swipe-left/right on the
+              // wrapping gesture detector, or any other track change)
+              // cross-fades the cover art instead of snapping it —
+              // the visual cue that registers the change actually
+              // happened, per docs/architecture.md's mini-player gesture
+              // spec.
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: CoverArt(
+                  key: ValueKey(track.id),
+                  size: 32,
+                  borderRadius: 6,
+                  label: track.title,
+                ),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

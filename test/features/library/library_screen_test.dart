@@ -59,13 +59,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Local Files'), findsOneWidget);
-      expect(find.text('/music'), findsOneWidget);
+      // The folder header shows its basename ('music'), not the full raw
+      // path -- see local_files_screen.dart's _folderLabelFor.
+      expect(find.text('music'), findsOneWidget);
       expect(find.text('Song'), findsOneWidget);
 
       router.pop();
       await tester.pumpAndSettle();
 
-      expect(find.text('/music'), findsNothing);
+      expect(find.text('music'), findsNothing);
       expect(find.text('Library'), findsOneWidget);
     },
   );

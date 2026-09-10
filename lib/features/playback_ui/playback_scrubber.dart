@@ -12,6 +12,17 @@ String formatPlaybackDuration(Duration d) {
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
 
+/// A *total* track duration's own display string — unlike a position,
+/// which is legitimately `Duration.zero` at the start of a track, a total
+/// duration of exactly zero only ever means "not known" (e.g. a local
+/// file, whose duration isn't read from tags — see
+/// `LocalFileSourceAdapter`'s doc comment). Showing "0:00" there would
+/// read as "this track is zero seconds long," not "unknown" -- `--:--` is
+/// the clear placeholder instead.
+String formatTrackDuration(Duration d) {
+  return d == Duration.zero ? '--:--' : formatPlaybackDuration(d);
+}
+
 /// Keys identifying the scrubber's parts (the line's opacity, the thumb,
 /// the time label) so tests can find them from outside this library —
 /// the widgets themselves are private.
@@ -171,8 +182,16 @@ class _PlaybackScrubberState extends State<PlaybackScrubber> {
     _scheduleHide();
   }
 
+  /// Bounds a step target to `[0, duration]` -- except when [duration] is
+  /// exactly zero, which (like [_actualFraction] already treats it) means
+  /// "not known" rather than "this track is zero seconds long" -- see
+  /// `PlaybackController._clampToTrackDuration`'s doc comment for the full
+  /// reasoning. Clamping to an upper bound of zero there would make the
+  /// ±10s-equivalent step actions permanently stuck at 0:00 for a local
+  /// track, the same failure this mirrors on the controller side.
   Duration _clampToDuration(Duration target) {
     if (target < Duration.zero) return Duration.zero;
+    if (widget.duration == Duration.zero) return target;
     return target > widget.duration ? widget.duration : target;
   }
 

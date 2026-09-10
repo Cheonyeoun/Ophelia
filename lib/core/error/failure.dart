@@ -37,6 +37,15 @@ class DecodeFailure extends Failure {
   const DecodeFailure([super.message = 'Decode error']);
 }
 
+/// The OS denied (or the user declined) a runtime permission an operation
+/// needed — e.g. audio file access before scanning a device folder.
+/// Distinct from [StorageFailure] so a caller can tell "denied access" apart
+/// from "storage itself is broken" and react differently (e.g. prompt the
+/// user to grant the permission, rather than a generic error).
+class PermissionFailure extends Failure {
+  const PermissionFailure([super.message = 'Permission denied']);
+}
+
 /// An operation failed, and an attempt to roll the system back to its
 /// prior state *because* of that failure also failed — so beyond the
 /// original problem, whatever was being rolled back (e.g.

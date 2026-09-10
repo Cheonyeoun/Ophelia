@@ -2218,6 +2218,914 @@ class LinkedFoldersCompanion extends UpdateCompanion<LinkedFolder> {
   }
 }
 
+class $PlaybackSessionTable extends PlaybackSession
+    with TableInfo<$PlaybackSessionTable, PlaybackSessionData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlaybackSessionTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _queueIndexMeta = const VerificationMeta(
+    'queueIndex',
+  );
+  @override
+  late final GeneratedColumn<int> queueIndex = GeneratedColumn<int>(
+    'queue_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMsMeta = const VerificationMeta(
+    'positionMs',
+  );
+  @override
+  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
+    'position_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _savedAtMeta = const VerificationMeta(
+    'savedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> savedAt = GeneratedColumn<DateTime>(
+    'saved_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, queueIndex, positionMs, savedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'playback_session';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlaybackSessionData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('queue_index')) {
+      context.handle(
+        _queueIndexMeta,
+        queueIndex.isAcceptableOrUnknown(data['queue_index']!, _queueIndexMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_queueIndexMeta);
+    }
+    if (data.containsKey('position_ms')) {
+      context.handle(
+        _positionMsMeta,
+        positionMs.isAcceptableOrUnknown(data['position_ms']!, _positionMsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMsMeta);
+    }
+    if (data.containsKey('saved_at')) {
+      context.handle(
+        _savedAtMeta,
+        savedAt.isAcceptableOrUnknown(data['saved_at']!, _savedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_savedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PlaybackSessionData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlaybackSessionData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      queueIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}queue_index'],
+      )!,
+      positionMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position_ms'],
+      )!,
+      savedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}saved_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PlaybackSessionTable createAlias(String alias) {
+    return $PlaybackSessionTable(attachedDatabase, alias);
+  }
+}
+
+class PlaybackSessionData extends DataClass
+    implements Insertable<PlaybackSessionData> {
+  final int id;
+  final int queueIndex;
+  final int positionMs;
+  final DateTime savedAt;
+  const PlaybackSessionData({
+    required this.id,
+    required this.queueIndex,
+    required this.positionMs,
+    required this.savedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['queue_index'] = Variable<int>(queueIndex);
+    map['position_ms'] = Variable<int>(positionMs);
+    map['saved_at'] = Variable<DateTime>(savedAt);
+    return map;
+  }
+
+  PlaybackSessionCompanion toCompanion(bool nullToAbsent) {
+    return PlaybackSessionCompanion(
+      id: Value(id),
+      queueIndex: Value(queueIndex),
+      positionMs: Value(positionMs),
+      savedAt: Value(savedAt),
+    );
+  }
+
+  factory PlaybackSessionData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlaybackSessionData(
+      id: serializer.fromJson<int>(json['id']),
+      queueIndex: serializer.fromJson<int>(json['queueIndex']),
+      positionMs: serializer.fromJson<int>(json['positionMs']),
+      savedAt: serializer.fromJson<DateTime>(json['savedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'queueIndex': serializer.toJson<int>(queueIndex),
+      'positionMs': serializer.toJson<int>(positionMs),
+      'savedAt': serializer.toJson<DateTime>(savedAt),
+    };
+  }
+
+  PlaybackSessionData copyWith({
+    int? id,
+    int? queueIndex,
+    int? positionMs,
+    DateTime? savedAt,
+  }) => PlaybackSessionData(
+    id: id ?? this.id,
+    queueIndex: queueIndex ?? this.queueIndex,
+    positionMs: positionMs ?? this.positionMs,
+    savedAt: savedAt ?? this.savedAt,
+  );
+  PlaybackSessionData copyWithCompanion(PlaybackSessionCompanion data) {
+    return PlaybackSessionData(
+      id: data.id.present ? data.id.value : this.id,
+      queueIndex: data.queueIndex.present
+          ? data.queueIndex.value
+          : this.queueIndex,
+      positionMs: data.positionMs.present
+          ? data.positionMs.value
+          : this.positionMs,
+      savedAt: data.savedAt.present ? data.savedAt.value : this.savedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackSessionData(')
+          ..write('id: $id, ')
+          ..write('queueIndex: $queueIndex, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('savedAt: $savedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, queueIndex, positionMs, savedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlaybackSessionData &&
+          other.id == this.id &&
+          other.queueIndex == this.queueIndex &&
+          other.positionMs == this.positionMs &&
+          other.savedAt == this.savedAt);
+}
+
+class PlaybackSessionCompanion extends UpdateCompanion<PlaybackSessionData> {
+  final Value<int> id;
+  final Value<int> queueIndex;
+  final Value<int> positionMs;
+  final Value<DateTime> savedAt;
+  const PlaybackSessionCompanion({
+    this.id = const Value.absent(),
+    this.queueIndex = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.savedAt = const Value.absent(),
+  });
+  PlaybackSessionCompanion.insert({
+    this.id = const Value.absent(),
+    required int queueIndex,
+    required int positionMs,
+    required DateTime savedAt,
+  }) : queueIndex = Value(queueIndex),
+       positionMs = Value(positionMs),
+       savedAt = Value(savedAt);
+  static Insertable<PlaybackSessionData> custom({
+    Expression<int>? id,
+    Expression<int>? queueIndex,
+    Expression<int>? positionMs,
+    Expression<DateTime>? savedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (queueIndex != null) 'queue_index': queueIndex,
+      if (positionMs != null) 'position_ms': positionMs,
+      if (savedAt != null) 'saved_at': savedAt,
+    });
+  }
+
+  PlaybackSessionCompanion copyWith({
+    Value<int>? id,
+    Value<int>? queueIndex,
+    Value<int>? positionMs,
+    Value<DateTime>? savedAt,
+  }) {
+    return PlaybackSessionCompanion(
+      id: id ?? this.id,
+      queueIndex: queueIndex ?? this.queueIndex,
+      positionMs: positionMs ?? this.positionMs,
+      savedAt: savedAt ?? this.savedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (queueIndex.present) {
+      map['queue_index'] = Variable<int>(queueIndex.value);
+    }
+    if (positionMs.present) {
+      map['position_ms'] = Variable<int>(positionMs.value);
+    }
+    if (savedAt.present) {
+      map['saved_at'] = Variable<DateTime>(savedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackSessionCompanion(')
+          ..write('id: $id, ')
+          ..write('queueIndex: $queueIndex, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('savedAt: $savedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PlaybackQueueEntriesTable extends PlaybackQueueEntries
+    with TableInfo<$PlaybackQueueEntriesTable, PlaybackQueueEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlaybackQueueEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<int> sessionId = GeneratedColumn<int>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES playback_session (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _trackIdMeta = const VerificationMeta(
+    'trackId',
+  );
+  @override
+  late final GeneratedColumn<String> trackId = GeneratedColumn<String>(
+    'track_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _artistMeta = const VerificationMeta('artist');
+  @override
+  late final GeneratedColumn<String> artist = GeneratedColumn<String>(
+    'artist',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _albumMeta = const VerificationMeta('album');
+  @override
+  late final GeneratedColumn<String> album = GeneratedColumn<String>(
+    'album',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _coverArtPathMeta = const VerificationMeta(
+    'coverArtPath',
+  );
+  @override
+  late final GeneratedColumn<String> coverArtPath = GeneratedColumn<String>(
+    'cover_art_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceTypeMeta = const VerificationMeta(
+    'sourceType',
+  );
+  @override
+  late final GeneratedColumn<String> sourceType = GeneratedColumn<String>(
+    'source_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sessionId,
+    position,
+    trackId,
+    title,
+    artist,
+    album,
+    durationMs,
+    coverArtPath,
+    sourceType,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'playback_queue_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlaybackQueueEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('track_id')) {
+      context.handle(
+        _trackIdMeta,
+        trackId.isAcceptableOrUnknown(data['track_id']!, _trackIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trackIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('artist')) {
+      context.handle(
+        _artistMeta,
+        artist.isAcceptableOrUnknown(data['artist']!, _artistMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_artistMeta);
+    }
+    if (data.containsKey('album')) {
+      context.handle(
+        _albumMeta,
+        album.isAcceptableOrUnknown(data['album']!, _albumMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_albumMeta);
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_durationMsMeta);
+    }
+    if (data.containsKey('cover_art_path')) {
+      context.handle(
+        _coverArtPathMeta,
+        coverArtPath.isAcceptableOrUnknown(
+          data['cover_art_path']!,
+          _coverArtPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_type')) {
+      context.handle(
+        _sourceTypeMeta,
+        sourceType.isAcceptableOrUnknown(data['source_type']!, _sourceTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceTypeMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PlaybackQueueEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlaybackQueueEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}session_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      trackId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}track_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      artist: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}artist'],
+      )!,
+      album: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}album'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      )!,
+      coverArtPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_art_path'],
+      ),
+      sourceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_type'],
+      )!,
+    );
+  }
+
+  @override
+  $PlaybackQueueEntriesTable createAlias(String alias) {
+    return $PlaybackQueueEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class PlaybackQueueEntry extends DataClass
+    implements Insertable<PlaybackQueueEntry> {
+  final int id;
+  final int sessionId;
+  final int position;
+  final String trackId;
+  final String title;
+  final String artist;
+  final String album;
+  final int durationMs;
+  final String? coverArtPath;
+  final String sourceType;
+  const PlaybackQueueEntry({
+    required this.id,
+    required this.sessionId,
+    required this.position,
+    required this.trackId,
+    required this.title,
+    required this.artist,
+    required this.album,
+    required this.durationMs,
+    this.coverArtPath,
+    required this.sourceType,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['session_id'] = Variable<int>(sessionId);
+    map['position'] = Variable<int>(position);
+    map['track_id'] = Variable<String>(trackId);
+    map['title'] = Variable<String>(title);
+    map['artist'] = Variable<String>(artist);
+    map['album'] = Variable<String>(album);
+    map['duration_ms'] = Variable<int>(durationMs);
+    if (!nullToAbsent || coverArtPath != null) {
+      map['cover_art_path'] = Variable<String>(coverArtPath);
+    }
+    map['source_type'] = Variable<String>(sourceType);
+    return map;
+  }
+
+  PlaybackQueueEntriesCompanion toCompanion(bool nullToAbsent) {
+    return PlaybackQueueEntriesCompanion(
+      id: Value(id),
+      sessionId: Value(sessionId),
+      position: Value(position),
+      trackId: Value(trackId),
+      title: Value(title),
+      artist: Value(artist),
+      album: Value(album),
+      durationMs: Value(durationMs),
+      coverArtPath: coverArtPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverArtPath),
+      sourceType: Value(sourceType),
+    );
+  }
+
+  factory PlaybackQueueEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlaybackQueueEntry(
+      id: serializer.fromJson<int>(json['id']),
+      sessionId: serializer.fromJson<int>(json['sessionId']),
+      position: serializer.fromJson<int>(json['position']),
+      trackId: serializer.fromJson<String>(json['trackId']),
+      title: serializer.fromJson<String>(json['title']),
+      artist: serializer.fromJson<String>(json['artist']),
+      album: serializer.fromJson<String>(json['album']),
+      durationMs: serializer.fromJson<int>(json['durationMs']),
+      coverArtPath: serializer.fromJson<String?>(json['coverArtPath']),
+      sourceType: serializer.fromJson<String>(json['sourceType']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sessionId': serializer.toJson<int>(sessionId),
+      'position': serializer.toJson<int>(position),
+      'trackId': serializer.toJson<String>(trackId),
+      'title': serializer.toJson<String>(title),
+      'artist': serializer.toJson<String>(artist),
+      'album': serializer.toJson<String>(album),
+      'durationMs': serializer.toJson<int>(durationMs),
+      'coverArtPath': serializer.toJson<String?>(coverArtPath),
+      'sourceType': serializer.toJson<String>(sourceType),
+    };
+  }
+
+  PlaybackQueueEntry copyWith({
+    int? id,
+    int? sessionId,
+    int? position,
+    String? trackId,
+    String? title,
+    String? artist,
+    String? album,
+    int? durationMs,
+    Value<String?> coverArtPath = const Value.absent(),
+    String? sourceType,
+  }) => PlaybackQueueEntry(
+    id: id ?? this.id,
+    sessionId: sessionId ?? this.sessionId,
+    position: position ?? this.position,
+    trackId: trackId ?? this.trackId,
+    title: title ?? this.title,
+    artist: artist ?? this.artist,
+    album: album ?? this.album,
+    durationMs: durationMs ?? this.durationMs,
+    coverArtPath: coverArtPath.present ? coverArtPath.value : this.coverArtPath,
+    sourceType: sourceType ?? this.sourceType,
+  );
+  PlaybackQueueEntry copyWithCompanion(PlaybackQueueEntriesCompanion data) {
+    return PlaybackQueueEntry(
+      id: data.id.present ? data.id.value : this.id,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      position: data.position.present ? data.position.value : this.position,
+      trackId: data.trackId.present ? data.trackId.value : this.trackId,
+      title: data.title.present ? data.title.value : this.title,
+      artist: data.artist.present ? data.artist.value : this.artist,
+      album: data.album.present ? data.album.value : this.album,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      coverArtPath: data.coverArtPath.present
+          ? data.coverArtPath.value
+          : this.coverArtPath,
+      sourceType: data.sourceType.present
+          ? data.sourceType.value
+          : this.sourceType,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackQueueEntry(')
+          ..write('id: $id, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('position: $position, ')
+          ..write('trackId: $trackId, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('coverArtPath: $coverArtPath, ')
+          ..write('sourceType: $sourceType')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sessionId,
+    position,
+    trackId,
+    title,
+    artist,
+    album,
+    durationMs,
+    coverArtPath,
+    sourceType,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlaybackQueueEntry &&
+          other.id == this.id &&
+          other.sessionId == this.sessionId &&
+          other.position == this.position &&
+          other.trackId == this.trackId &&
+          other.title == this.title &&
+          other.artist == this.artist &&
+          other.album == this.album &&
+          other.durationMs == this.durationMs &&
+          other.coverArtPath == this.coverArtPath &&
+          other.sourceType == this.sourceType);
+}
+
+class PlaybackQueueEntriesCompanion
+    extends UpdateCompanion<PlaybackQueueEntry> {
+  final Value<int> id;
+  final Value<int> sessionId;
+  final Value<int> position;
+  final Value<String> trackId;
+  final Value<String> title;
+  final Value<String> artist;
+  final Value<String> album;
+  final Value<int> durationMs;
+  final Value<String?> coverArtPath;
+  final Value<String> sourceType;
+  const PlaybackQueueEntriesCompanion({
+    this.id = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.trackId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.coverArtPath = const Value.absent(),
+    this.sourceType = const Value.absent(),
+  });
+  PlaybackQueueEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required int sessionId,
+    required int position,
+    required String trackId,
+    required String title,
+    required String artist,
+    required String album,
+    required int durationMs,
+    this.coverArtPath = const Value.absent(),
+    required String sourceType,
+  }) : sessionId = Value(sessionId),
+       position = Value(position),
+       trackId = Value(trackId),
+       title = Value(title),
+       artist = Value(artist),
+       album = Value(album),
+       durationMs = Value(durationMs),
+       sourceType = Value(sourceType);
+  static Insertable<PlaybackQueueEntry> custom({
+    Expression<int>? id,
+    Expression<int>? sessionId,
+    Expression<int>? position,
+    Expression<String>? trackId,
+    Expression<String>? title,
+    Expression<String>? artist,
+    Expression<String>? album,
+    Expression<int>? durationMs,
+    Expression<String>? coverArtPath,
+    Expression<String>? sourceType,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sessionId != null) 'session_id': sessionId,
+      if (position != null) 'position': position,
+      if (trackId != null) 'track_id': trackId,
+      if (title != null) 'title': title,
+      if (artist != null) 'artist': artist,
+      if (album != null) 'album': album,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (coverArtPath != null) 'cover_art_path': coverArtPath,
+      if (sourceType != null) 'source_type': sourceType,
+    });
+  }
+
+  PlaybackQueueEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? sessionId,
+    Value<int>? position,
+    Value<String>? trackId,
+    Value<String>? title,
+    Value<String>? artist,
+    Value<String>? album,
+    Value<int>? durationMs,
+    Value<String?>? coverArtPath,
+    Value<String>? sourceType,
+  }) {
+    return PlaybackQueueEntriesCompanion(
+      id: id ?? this.id,
+      sessionId: sessionId ?? this.sessionId,
+      position: position ?? this.position,
+      trackId: trackId ?? this.trackId,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      album: album ?? this.album,
+      durationMs: durationMs ?? this.durationMs,
+      coverArtPath: coverArtPath ?? this.coverArtPath,
+      sourceType: sourceType ?? this.sourceType,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<int>(sessionId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (trackId.present) {
+      map['track_id'] = Variable<String>(trackId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (artist.present) {
+      map['artist'] = Variable<String>(artist.value);
+    }
+    if (album.present) {
+      map['album'] = Variable<String>(album.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (coverArtPath.present) {
+      map['cover_art_path'] = Variable<String>(coverArtPath.value);
+    }
+    if (sourceType.present) {
+      map['source_type'] = Variable<String>(sourceType.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlaybackQueueEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('position: $position, ')
+          ..write('trackId: $trackId, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('coverArtPath: $coverArtPath, ')
+          ..write('sourceType: $sourceType')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$OpheliaDatabase extends GeneratedDatabase {
   _$OpheliaDatabase(QueryExecutor e) : super(e);
   $OpheliaDatabaseManager get managers => $OpheliaDatabaseManager(this);
@@ -2230,6 +3138,11 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
   late final $ProfileTable profile = $ProfileTable(this);
   late final $DownloadsTable downloads = $DownloadsTable(this);
   late final $LinkedFoldersTable linkedFolders = $LinkedFoldersTable(this);
+  late final $PlaybackSessionTable playbackSession = $PlaybackSessionTable(
+    this,
+  );
+  late final $PlaybackQueueEntriesTable playbackQueueEntries =
+      $PlaybackQueueEntriesTable(this);
   late final Index playlistTracksTrackId = Index(
     'playlist_tracks_track_id',
     'CREATE INDEX playlist_tracks_track_id ON playlist_tracks (track_id)',
@@ -2241,6 +3154,10 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
   late final Index listeningEventsPlayedAt = Index(
     'listening_events_played_at',
     'CREATE INDEX listening_events_played_at ON listening_events (played_at)',
+  );
+  late final Index playbackQueueEntriesSessionId = Index(
+    'playback_queue_entries_session_id',
+    'CREATE INDEX playback_queue_entries_session_id ON playback_queue_entries (session_id)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2254,9 +3171,12 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
     profile,
     downloads,
     linkedFolders,
+    playbackSession,
+    playbackQueueEntries,
     playlistTracksTrackId,
     listeningEventsTrackId,
     listeningEventsPlayedAt,
+    playbackQueueEntriesSessionId,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2266,6 +3186,13 @@ abstract class _$OpheliaDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('playlist_tracks', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'playback_session',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('playback_queue_entries', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -4408,6 +5335,739 @@ typedef $$LinkedFoldersTableProcessedTableManager =
       LinkedFolder,
       PrefetchHooks Function()
     >;
+typedef $$PlaybackSessionTableCreateCompanionBuilder =
+    PlaybackSessionCompanion Function({
+      Value<int> id,
+      required int queueIndex,
+      required int positionMs,
+      required DateTime savedAt,
+    });
+typedef $$PlaybackSessionTableUpdateCompanionBuilder =
+    PlaybackSessionCompanion Function({
+      Value<int> id,
+      Value<int> queueIndex,
+      Value<int> positionMs,
+      Value<DateTime> savedAt,
+    });
+
+final class $$PlaybackSessionTableReferences
+    extends
+        BaseReferences<
+          _$OpheliaDatabase,
+          $PlaybackSessionTable,
+          PlaybackSessionData
+        > {
+  $$PlaybackSessionTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<
+    $PlaybackQueueEntriesTable,
+    List<PlaybackQueueEntry>
+  >
+  _playbackQueueEntriesRefsTable(_$OpheliaDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.playbackQueueEntries,
+        aliasName: 'playback_session__id__playback_queue_entries__session_id',
+      );
+
+  $$PlaybackQueueEntriesTableProcessedTableManager
+  get playbackQueueEntriesRefs {
+    final manager = $$PlaybackQueueEntriesTableTableManager(
+      $_db,
+      $_db.playbackQueueEntries,
+    ).filter((f) => f.sessionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _playbackQueueEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$PlaybackSessionTableFilterComposer
+    extends Composer<_$OpheliaDatabase, $PlaybackSessionTable> {
+  $$PlaybackSessionTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get queueIndex => $composableBuilder(
+    column: $table.queueIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get savedAt => $composableBuilder(
+    column: $table.savedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> playbackQueueEntriesRefs(
+    Expression<bool> Function($$PlaybackQueueEntriesTableFilterComposer f) f,
+  ) {
+    final $$PlaybackQueueEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.playbackQueueEntries,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PlaybackQueueEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.playbackQueueEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PlaybackSessionTableOrderingComposer
+    extends Composer<_$OpheliaDatabase, $PlaybackSessionTable> {
+  $$PlaybackSessionTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get queueIndex => $composableBuilder(
+    column: $table.queueIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get savedAt => $composableBuilder(
+    column: $table.savedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PlaybackSessionTableAnnotationComposer
+    extends Composer<_$OpheliaDatabase, $PlaybackSessionTable> {
+  $$PlaybackSessionTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get queueIndex => $composableBuilder(
+    column: $table.queueIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get positionMs => $composableBuilder(
+    column: $table.positionMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get savedAt =>
+      $composableBuilder(column: $table.savedAt, builder: (column) => column);
+
+  Expression<T> playbackQueueEntriesRefs<T extends Object>(
+    Expression<T> Function($$PlaybackQueueEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$PlaybackQueueEntriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.playbackQueueEntries,
+          getReferencedColumn: (t) => t.sessionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PlaybackQueueEntriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.playbackQueueEntries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$PlaybackSessionTableTableManager
+    extends
+        RootTableManager<
+          _$OpheliaDatabase,
+          $PlaybackSessionTable,
+          PlaybackSessionData,
+          $$PlaybackSessionTableFilterComposer,
+          $$PlaybackSessionTableOrderingComposer,
+          $$PlaybackSessionTableAnnotationComposer,
+          $$PlaybackSessionTableCreateCompanionBuilder,
+          $$PlaybackSessionTableUpdateCompanionBuilder,
+          (PlaybackSessionData, $$PlaybackSessionTableReferences),
+          PlaybackSessionData,
+          PrefetchHooks Function({bool playbackQueueEntriesRefs})
+        > {
+  $$PlaybackSessionTableTableManager(
+    _$OpheliaDatabase db,
+    $PlaybackSessionTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlaybackSessionTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlaybackSessionTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlaybackSessionTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> queueIndex = const Value.absent(),
+                Value<int> positionMs = const Value.absent(),
+                Value<DateTime> savedAt = const Value.absent(),
+              }) => PlaybackSessionCompanion(
+                id: id,
+                queueIndex: queueIndex,
+                positionMs: positionMs,
+                savedAt: savedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int queueIndex,
+                required int positionMs,
+                required DateTime savedAt,
+              }) => PlaybackSessionCompanion.insert(
+                id: id,
+                queueIndex: queueIndex,
+                positionMs: positionMs,
+                savedAt: savedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PlaybackSessionTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({playbackQueueEntriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (playbackQueueEntriesRefs) db.playbackQueueEntries,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (playbackQueueEntriesRefs)
+                    await $_getPrefetchedData<
+                      PlaybackSessionData,
+                      $PlaybackSessionTable,
+                      PlaybackQueueEntry
+                    >(
+                      currentTable: table,
+                      referencedTable: $$PlaybackSessionTableReferences
+                          ._playbackQueueEntriesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$PlaybackSessionTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).playbackQueueEntriesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.sessionId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PlaybackSessionTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OpheliaDatabase,
+      $PlaybackSessionTable,
+      PlaybackSessionData,
+      $$PlaybackSessionTableFilterComposer,
+      $$PlaybackSessionTableOrderingComposer,
+      $$PlaybackSessionTableAnnotationComposer,
+      $$PlaybackSessionTableCreateCompanionBuilder,
+      $$PlaybackSessionTableUpdateCompanionBuilder,
+      (PlaybackSessionData, $$PlaybackSessionTableReferences),
+      PlaybackSessionData,
+      PrefetchHooks Function({bool playbackQueueEntriesRefs})
+    >;
+typedef $$PlaybackQueueEntriesTableCreateCompanionBuilder =
+    PlaybackQueueEntriesCompanion Function({
+      Value<int> id,
+      required int sessionId,
+      required int position,
+      required String trackId,
+      required String title,
+      required String artist,
+      required String album,
+      required int durationMs,
+      Value<String?> coverArtPath,
+      required String sourceType,
+    });
+typedef $$PlaybackQueueEntriesTableUpdateCompanionBuilder =
+    PlaybackQueueEntriesCompanion Function({
+      Value<int> id,
+      Value<int> sessionId,
+      Value<int> position,
+      Value<String> trackId,
+      Value<String> title,
+      Value<String> artist,
+      Value<String> album,
+      Value<int> durationMs,
+      Value<String?> coverArtPath,
+      Value<String> sourceType,
+    });
+
+final class $$PlaybackQueueEntriesTableReferences
+    extends
+        BaseReferences<
+          _$OpheliaDatabase,
+          $PlaybackQueueEntriesTable,
+          PlaybackQueueEntry
+        > {
+  $$PlaybackQueueEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PlaybackSessionTable _sessionIdTable(_$OpheliaDatabase db) => db
+      .playbackSession
+      .createAlias('playback_queue_entries__session_id__playback_session__id');
+
+  $$PlaybackSessionTableProcessedTableManager get sessionId {
+    final $_column = $_itemColumn<int>('session_id')!;
+
+    final manager = $$PlaybackSessionTableTableManager(
+      $_db,
+      $_db.playbackSession,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PlaybackQueueEntriesTableFilterComposer
+    extends Composer<_$OpheliaDatabase, $PlaybackQueueEntriesTable> {
+  $$PlaybackQueueEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get artist => $composableBuilder(
+    column: $table.artist,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get album => $composableBuilder(
+    column: $table.album,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverArtPath => $composableBuilder(
+    column: $table.coverArtPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PlaybackSessionTableFilterComposer get sessionId {
+    final $$PlaybackSessionTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.playbackSession,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PlaybackSessionTableFilterComposer(
+            $db: $db,
+            $table: $db.playbackSession,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PlaybackQueueEntriesTableOrderingComposer
+    extends Composer<_$OpheliaDatabase, $PlaybackQueueEntriesTable> {
+  $$PlaybackQueueEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get artist => $composableBuilder(
+    column: $table.artist,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get album => $composableBuilder(
+    column: $table.album,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverArtPath => $composableBuilder(
+    column: $table.coverArtPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PlaybackSessionTableOrderingComposer get sessionId {
+    final $$PlaybackSessionTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.playbackSession,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PlaybackSessionTableOrderingComposer(
+            $db: $db,
+            $table: $db.playbackSession,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PlaybackQueueEntriesTableAnnotationComposer
+    extends Composer<_$OpheliaDatabase, $PlaybackQueueEntriesTable> {
+  $$PlaybackQueueEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get trackId =>
+      $composableBuilder(column: $table.trackId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get artist =>
+      $composableBuilder(column: $table.artist, builder: (column) => column);
+
+  GeneratedColumn<String> get album =>
+      $composableBuilder(column: $table.album, builder: (column) => column);
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverArtPath => $composableBuilder(
+    column: $table.coverArtPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceType => $composableBuilder(
+    column: $table.sourceType,
+    builder: (column) => column,
+  );
+
+  $$PlaybackSessionTableAnnotationComposer get sessionId {
+    final $$PlaybackSessionTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.playbackSession,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PlaybackSessionTableAnnotationComposer(
+            $db: $db,
+            $table: $db.playbackSession,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PlaybackQueueEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$OpheliaDatabase,
+          $PlaybackQueueEntriesTable,
+          PlaybackQueueEntry,
+          $$PlaybackQueueEntriesTableFilterComposer,
+          $$PlaybackQueueEntriesTableOrderingComposer,
+          $$PlaybackQueueEntriesTableAnnotationComposer,
+          $$PlaybackQueueEntriesTableCreateCompanionBuilder,
+          $$PlaybackQueueEntriesTableUpdateCompanionBuilder,
+          (PlaybackQueueEntry, $$PlaybackQueueEntriesTableReferences),
+          PlaybackQueueEntry,
+          PrefetchHooks Function({bool sessionId})
+        > {
+  $$PlaybackQueueEntriesTableTableManager(
+    _$OpheliaDatabase db,
+    $PlaybackQueueEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlaybackQueueEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlaybackQueueEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PlaybackQueueEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> sessionId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> trackId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> artist = const Value.absent(),
+                Value<String> album = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                Value<String?> coverArtPath = const Value.absent(),
+                Value<String> sourceType = const Value.absent(),
+              }) => PlaybackQueueEntriesCompanion(
+                id: id,
+                sessionId: sessionId,
+                position: position,
+                trackId: trackId,
+                title: title,
+                artist: artist,
+                album: album,
+                durationMs: durationMs,
+                coverArtPath: coverArtPath,
+                sourceType: sourceType,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int sessionId,
+                required int position,
+                required String trackId,
+                required String title,
+                required String artist,
+                required String album,
+                required int durationMs,
+                Value<String?> coverArtPath = const Value.absent(),
+                required String sourceType,
+              }) => PlaybackQueueEntriesCompanion.insert(
+                id: id,
+                sessionId: sessionId,
+                position: position,
+                trackId: trackId,
+                title: title,
+                artist: artist,
+                album: album,
+                durationMs: durationMs,
+                coverArtPath: coverArtPath,
+                sourceType: sourceType,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PlaybackQueueEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sessionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sessionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.sessionId,
+                                referencedTable:
+                                    $$PlaybackQueueEntriesTableReferences
+                                        ._sessionIdTable(db),
+                                referencedColumn:
+                                    $$PlaybackQueueEntriesTableReferences
+                                        ._sessionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PlaybackQueueEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OpheliaDatabase,
+      $PlaybackQueueEntriesTable,
+      PlaybackQueueEntry,
+      $$PlaybackQueueEntriesTableFilterComposer,
+      $$PlaybackQueueEntriesTableOrderingComposer,
+      $$PlaybackQueueEntriesTableAnnotationComposer,
+      $$PlaybackQueueEntriesTableCreateCompanionBuilder,
+      $$PlaybackQueueEntriesTableUpdateCompanionBuilder,
+      (PlaybackQueueEntry, $$PlaybackQueueEntriesTableReferences),
+      PlaybackQueueEntry,
+      PrefetchHooks Function({bool sessionId})
+    >;
 
 class $OpheliaDatabaseManager {
   final _$OpheliaDatabase _db;
@@ -4426,4 +6086,8 @@ class $OpheliaDatabaseManager {
       $$DownloadsTableTableManager(_db, _db.downloads);
   $$LinkedFoldersTableTableManager get linkedFolders =>
       $$LinkedFoldersTableTableManager(_db, _db.linkedFolders);
+  $$PlaybackSessionTableTableManager get playbackSession =>
+      $$PlaybackSessionTableTableManager(_db, _db.playbackSession);
+  $$PlaybackQueueEntriesTableTableManager get playbackQueueEntries =>
+      $$PlaybackQueueEntriesTableTableManager(_db, _db.playbackQueueEntries);
 }

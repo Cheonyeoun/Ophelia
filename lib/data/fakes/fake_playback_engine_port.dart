@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import '../../core/domain/playback_engine_port.dart';
@@ -57,6 +58,18 @@ class FakePlaybackEnginePort implements PlaybackEnginePort {
   /// this getter existed.
   @override
   Stream<Duration> get positionStream => const Stream.empty();
+
+  final _durationController = StreamController<Duration?>.broadcast();
+
+  /// Never emits on its own -- this fake has no real decoder to discover
+  /// a duration from. A test that needs `PlaybackController` to react to
+  /// one arriving calls [emitDuration] directly.
+  @override
+  Stream<Duration?> get durationStream => _durationController.stream;
+
+  /// Test hook simulating the engine reporting [duration] as the current
+  /// track's real, now-known duration -- see [durationStream].
+  void emitDuration(Duration? duration) => _durationController.add(duration);
 
   /// Indices already visited during the current shuffle "round", in
   /// order, with [currentIndex] always last — lets skipPrevious undo a

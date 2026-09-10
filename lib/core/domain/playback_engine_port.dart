@@ -98,4 +98,17 @@ abstract interface class PlaybackEnginePort {
   /// continuous-time counterpart to the discrete position snapshots
   /// `play`/`seek`/`skipNext`/`skipPrevious` already produce on their own.
   Stream<Duration> get positionStream;
+
+  /// The current track's real duration, reported once the engine actually
+  /// knows it (`null` before then, or if it never finds out) — matches
+  /// `just_audio`'s own `AudioPlayer.durationStream` contract, which a
+  /// real adapter forwards directly. `PlaybackController` listens to this
+  /// to refine a track's own `durationMs` once a real value arrives,
+  /// which matters for any track whose domain metadata doesn't already
+  /// carry one — a local file has no tag reader (see
+  /// `LocalFileSourceAdapter`'s doc comment) and always reports `0`
+  /// ("not known") until this fills it in, which is what the ±10s seek
+  /// buttons and the scrubber both need to actually do anything (see
+  /// `PlaybackController._clampToTrackDuration`).
+  Stream<Duration?> get durationStream;
 }

@@ -5,6 +5,7 @@ import 'package:ophelia/app/providers.dart';
 import 'package:ophelia/app/router.dart';
 import 'package:ophelia/core/domain/listening_event.dart';
 import 'package:ophelia/core/domain/local_library_port.dart';
+import 'package:ophelia/core/domain/playback_session_snapshot.dart';
 import 'package:ophelia/core/domain/playlist.dart';
 import 'package:ophelia/core/domain/user_profile.dart';
 import 'package:ophelia/core/error/failure.dart';
@@ -31,7 +32,8 @@ class _FailingPlaylistLibrary implements LocalLibraryPort {
   }
 
   @override
-  Future<Result<List<Playlist>, Failure>> getPlaylists() => inner.getPlaylists();
+  Future<Result<List<Playlist>, Failure>> getPlaylists() =>
+      inner.getPlaylists();
 
   @override
   Future<Result<void, Failure>> savePlaylist(Playlist playlist) =>
@@ -55,6 +57,15 @@ class _FailingPlaylistLibrary implements LocalLibraryPort {
   @override
   Future<Result<List<ListeningEvent>, Failure>> getListeningEvents() =>
       inner.getListeningEvents();
+
+  @override
+  Future<Result<void, Failure>> saveLastPlaybackState(
+    PlaybackSessionSnapshot snapshot,
+  ) => inner.saveLastPlaybackState(snapshot);
+
+  @override
+  Future<Result<PlaybackSessionSnapshot?, Failure>> getLastPlaybackState() =>
+      inner.getLastPlaybackState();
 }
 
 /// Covers the previously-missing playlist navigation gap: tapping a
@@ -67,9 +78,7 @@ void main() {
         overrides: [
           localLibraryProvider.overrideWithValue(FakeLocalLibraryPort()),
           playbackEngineProvider.overrideWithValue(FakePlaybackEnginePort()),
-          localFileSourceProvider.overrideWithValue(
-            FakeLocalFileSourcePort(),
-          ),
+          localFileSourceProvider.overrideWithValue(FakeLocalFileSourcePort()),
         ],
         child: const OpheliaApp(),
       ),
@@ -114,26 +123,24 @@ void main() {
     },
   );
 
-  testWidgets(
-    'tapping a track in the playlist plays it, queued from the whole '
-    'playlist starting at that track',
-    (tester) async {
-      final container = await pumpApp(tester);
-      final router = container.read(routerProvider);
-      router.push('/playlist/p1');
-      await tester.pumpAndSettle();
+  testWidgets('tapping a track in the playlist plays it, queued from the whole '
+      'playlist starting at that track', (tester) async {
+    final container = await pumpApp(tester);
+    final router = container.read(routerProvider);
+    router.push('/playlist/p1');
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Marble & Ash'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Marble & Ash'));
+    await tester.pumpAndSettle();
 
-      final playback = container.read(playbackControllerProvider).playback;
-      expect(playback.currentTrack?.title, 'Marble & Ash');
-      expect(
-        playback.queue.map((track) => track.title),
-        ['Low Tide', 'Marble & Ash', 'Quiet Rooms'],
-      );
-    },
-  );
+    final playback = container.read(playbackControllerProvider).playback;
+    expect(playback.currentTrack?.title, 'Marble & Ash');
+    expect(playback.queue.map((track) => track.title), [
+      'Low Tide',
+      'Marble & Ash',
+      'Quiet Rooms',
+    ]);
+  });
 
   testWidgets(
     'a playlist id containing a slash round-trips through the route via '
@@ -149,6 +156,9 @@ void main() {
           overrides: [
             localLibraryProvider.overrideWithValue(
               FakeLocalLibraryPort(playlists: [trickyPlaylist]),
+            ),
+            localFileSourceProvider.overrideWithValue(
+              FakeLocalFileSourcePort(),
             ),
           ],
           child: const OpheliaApp(),
@@ -175,42 +185,37 @@ void main() {
     },
   );
 
-  testWidgets(
-    'a ResultFailure from getPlaylist renders the error state with a '
-    'working retry action, not an empty-tracks message',
-    (tester) async {
-      final failingLibrary = _FailingPlaylistLibrary(FakeLocalLibraryPort());
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            localLibraryProvider.overrideWithValue(failingLibrary),
-          ],
-          child: const OpheliaApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(OpheliaApp)),
-      );
-      final router = container.read(routerProvider);
+  testWidgets('a ResultFailure from getPlaylist renders the error state with a '
+      'working retry action, not an empty-tracks message', (tester) async {
+    final failingLibrary = _FailingPlaylistLibrary(FakeLocalLibraryPort());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          localLibraryProvider.overrideWithValue(failingLibrary),
+          localFileSourceProvider.overrideWithValue(FakeLocalFileSourcePort()),
+        ],
+        child: const OpheliaApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(OpheliaApp)),
+    );
+    final router = container.read(routerProvider);
 
-      router.push('/playlist/p1');
-      await tester.pumpAndSettle();
+    router.push('/playlist/p1');
+    await tester.pumpAndSettle();
 
-      expect(find.text('No tracks in this playlist'), findsNothing);
-      expect(find.text('library unavailable'), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
-      final callsBeforeRetry = failingLibrary.getPlaylistCallCount;
-      expect(callsBeforeRetry, greaterThan(0));
+    expect(find.text('No tracks in this playlist'), findsNothing);
+    expect(find.text('library unavailable'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    final callsBeforeRetry = failingLibrary.getPlaylistCallCount;
+    expect(callsBeforeRetry, greaterThan(0));
 
-      await tester.tap(find.text('Retry'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
 
-      expect(
-        failingLibrary.getPlaylistCallCount,
-        greaterThan(callsBeforeRetry),
-      );
-      expect(find.text('library unavailable'), findsOneWidget);
-    },
-  );
+    expect(failingLibrary.getPlaylistCallCount, greaterThan(callsBeforeRetry));
+    expect(find.text('library unavailable'), findsOneWidget);
+  });
 }

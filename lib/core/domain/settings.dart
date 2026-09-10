@@ -7,6 +7,7 @@ class Settings {
   final String downloadQuality;
   final bool wifiOnlyDownloads;
   final String connectedServer;
+  final String immersiveHudAutoHideDelay;
 
   const Settings({
     required this.streamingQuality,
@@ -14,6 +15,7 @@ class Settings {
     required this.downloadQuality,
     required this.wifiOnlyDownloads,
     required this.connectedServer,
+    required this.immersiveHudAutoHideDelay,
   });
 
   /// The out-of-the-box defaults, used to seed a fresh `SettingsPort`
@@ -25,6 +27,7 @@ class Settings {
     downloadQuality: 'Lossless',
     wifiOnlyDownloads: true,
     connectedServer: 'Home library',
+    immersiveHudAutoHideDelay: '5s',
   );
 
   Settings copyWith({
@@ -33,6 +36,7 @@ class Settings {
     String? downloadQuality,
     bool? wifiOnlyDownloads,
     String? connectedServer,
+    String? immersiveHudAutoHideDelay,
   }) {
     return Settings(
       streamingQuality: streamingQuality ?? this.streamingQuality,
@@ -40,6 +44,8 @@ class Settings {
       downloadQuality: downloadQuality ?? this.downloadQuality,
       wifiOnlyDownloads: wifiOnlyDownloads ?? this.wifiOnlyDownloads,
       connectedServer: connectedServer ?? this.connectedServer,
+      immersiveHudAutoHideDelay:
+          immersiveHudAutoHideDelay ?? this.immersiveHudAutoHideDelay,
     );
   }
 
@@ -52,7 +58,8 @@ class Settings {
           gaplessPlayback == other.gaplessPlayback &&
           downloadQuality == other.downloadQuality &&
           wifiOnlyDownloads == other.wifiOnlyDownloads &&
-          connectedServer == other.connectedServer;
+          connectedServer == other.connectedServer &&
+          immersiveHudAutoHideDelay == other.immersiveHudAutoHideDelay;
 
   @override
   int get hashCode => Object.hash(
@@ -61,5 +68,6 @@ class Settings {
         downloadQuality,
         wifiOnlyDownloads,
         connectedServer,
+        immersiveHudAutoHideDelay,
       );
 }

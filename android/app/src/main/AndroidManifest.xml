@@ -6,6 +6,19 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- local_file_source: reading audio files from a user-linked device
+         folder (see lib/data/local_files/local_file_source_adapter.dart).
+         READ_MEDIA_AUDIO is the Android 13+ (API 33+) runtime permission;
+         READ_EXTERNAL_STORAGE covers API 32 and below, where
+         READ_MEDIA_AUDIO doesn't exist; maxSdkVersion keeps it from being
+         requested (and needed) on 33+, where it's superseded. Declaring
+         either alone isn't enough: both must actually be requested at
+         runtime (see LocalFileSourceAdapter.ensureAudioPermission) before
+         scanning a folder, or the OS silently denies filesystem access. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
     <application
         android:label="ophelia"
         android:name="${applicationName}"

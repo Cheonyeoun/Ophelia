@@ -7,6 +7,7 @@ void main() {
     expect(const NotFoundFailure().message, 'Not found');
     expect(const StorageFailure().message, 'Storage error');
     expect(const DecodeFailure().message, 'Decode error');
+    expect(const PermissionFailure().message, 'Permission denied');
   });
 
   test('each failure type accepts a custom message', () {
@@ -14,6 +15,10 @@ void main() {
     expect(const NotFoundFailure('no such track').message, 'no such track');
     expect(const StorageFailure('disk full').message, 'disk full');
     expect(const DecodeFailure('bad json').message, 'bad json');
+    expect(
+      const PermissionFailure('audio access denied').message,
+      'audio access denied',
+    );
   });
 
   test('two instances of the same failure type with the same message are '
@@ -38,6 +43,7 @@ void main() {
           NotFoundFailure() => 'not_found',
           StorageFailure() => 'storage',
           DecodeFailure() => 'decode',
+          PermissionFailure() => 'permission',
           EngineInconsistentFailure() => 'engine_inconsistent',
         };
 
@@ -45,6 +51,7 @@ void main() {
     expect(describe(const NotFoundFailure()), 'not_found');
     expect(describe(const StorageFailure()), 'storage');
     expect(describe(const DecodeFailure()), 'decode');
+    expect(describe(const PermissionFailure()), 'permission');
     expect(
       describe(EngineInconsistentFailure(const StorageFailure(), const StorageFailure())),
       'engine_inconsistent',

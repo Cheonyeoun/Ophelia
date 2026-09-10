@@ -50,4 +50,11 @@ class SettingsController extends Notifier<Settings> {
       state = updated;
     }
   }
+
+  Future<void> cycleImmersiveHudAutoHideDelay() async {
+    final result = await ref.read(setImmersiveHudAutoHideDelayProvider)();
+    if (result case Success(value: final updated)) {
+      state = updated;
+    }
+  }
 }

@@ -39,14 +39,14 @@ class OpheliaNavigationSnapshot implements PlaybackNavigationSnapshot {
   /// called before the handler has even finished initializing (see that
   /// class's doc comment for why that's always a safe, correct answer).
   factory OpheliaNavigationSnapshot.initial() => OpheliaNavigationSnapshot(
-        currentTrack: null,
-        currentSourcePath: null,
-        position: Duration.zero,
-        isPlaying: false,
-        queue: const [],
-        currentIndex: -1,
-        shuffleHistory: const [],
-      );
+    currentTrack: null,
+    currentSourcePath: null,
+    position: Duration.zero,
+    isPlaying: false,
+    queue: const [],
+    currentIndex: -1,
+    shuffleHistory: const [],
+  );
 }
 
 /// A [Track] source path starting with this prefix names a Flutter asset
@@ -81,8 +81,9 @@ AudioSource audioSourceForPath(String sourcePath) {
 /// for a stream URL, a [StorageFailure] for a local file or asset. See
 /// [audioSourceForPath]'s doc comment on why this is a top-level function.
 Failure failureForLoadException(Object e, String sourcePath) {
-  final message =
-      e is PlayerException ? (e.message ?? e.toString()) : e.toString();
+  final message = e is PlayerException
+      ? (e.message ?? e.toString())
+      : e.toString();
   final isNetwork =
       sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
   return isNetwork ? NetworkFailure(message) : StorageFailure(message);
@@ -152,10 +153,10 @@ class OpheliaAudioHandler extends BaseAudioHandler {
   // constructor.
   OpheliaAudioHandler({
     required Future<Result<String, Failure>> Function(Track track)
-        resolveSource,
+    resolveSource,
     Random? random,
-  })  : _resolveSource = resolveSource, // ignore: prefer_initializing_formals
-        _random = random ?? Random() {
+  }) : _resolveSource = resolveSource, // ignore: prefer_initializing_formals
+       _random = random ?? Random() {
     _player.playbackEventStream.listen(_broadcastPlaybackState);
     _player.positionStream.listen((position) {
       _lastKnownPosition = position;
@@ -165,6 +166,10 @@ class OpheliaAudioHandler extends BaseAudioHandler {
   /// Forwarded directly from `just_audio` -- see
   /// `PlaybackEnginePort.positionStream`'s doc comment.
   Stream<Duration> get positionStream => _player.positionStream;
+
+  /// Forwarded directly from `just_audio` -- see
+  /// `PlaybackEnginePort.durationStream`'s doc comment.
+  Stream<Duration?> get durationStream => _player.durationStream;
 
   Future<Result<void, Failure>> performPlay(
     Track track,
@@ -425,32 +430,51 @@ class OpheliaAudioHandler extends BaseAudioHandler {
         return Result.failure(f);
     }
 
+    // `just_audio` hands back the duration it already knows once loading
+    // -- for most files, that's the real duration, determined synchronously
+    // as part of this very call, well before `durationStream` would ever
+    // report it. Previously this return value was discarded entirely,
+    // leaving PlaybackController to wait on that stream (or fall back to a
+    // value learned earlier this session) even when the engine already had
+    // the real answer in hand right here. Only applied when it's actually
+    // known and positive -- a `Track` domain object's `durationMs: 0` is
+    // its own "not known" sentinel (see LocalFileSourceAdapter's doc
+    // comment), so a `null`/zero result here just leaves that sentinel in
+    // place rather than manufacturing a fake zero-length duration.
+    Duration? loadedDuration;
     try {
-      await _player.setAudioSource(audioSourceForPath(sourcePath));
+      loadedDuration = await _player.setAudioSource(
+        audioSourceForPath(sourcePath),
+      );
     } catch (e) {
       return Result.failure(failureForLoadException(e, sourcePath));
     }
 
+    final resolvedTrack =
+        loadedDuration != null && loadedDuration.inMilliseconds > 0
+        ? track.copyWith(durationMs: loadedDuration.inMilliseconds)
+        : track;
+
     currentIndex = index;
-    currentTrack = track;
+    currentTrack = resolvedTrack;
     currentSourcePath = sourcePath;
     _lastKnownPosition = Duration.zero;
     _isPlaying = true;
     _broadcastMediaItem();
     unawaited(_player.play());
-    return Result.success(track);
+    return Result.success(resolvedTrack);
   }
 
   MediaItem _toMediaItem(Track track) => MediaItem(
-        id: track.id,
-        title: track.title,
-        artist: track.artist,
-        album: track.album,
-        duration: Duration(milliseconds: track.durationMs),
-        artUri: track.coverArtPath == null
-            ? null
-            : Uri.tryParse(track.coverArtPath!),
-      );
+    id: track.id,
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    duration: Duration(milliseconds: track.durationMs),
+    artUri: track.coverArtPath == null
+        ? null
+        : Uri.tryParse(track.coverArtPath!),
+  );
 
   void _broadcastMediaItem() {
     final track = currentTrack;
@@ -540,8 +564,7 @@ class OpheliaAudioHandler extends BaseAudioHandler {
       AudioServiceRepeatMode.none => RepeatMode.off,
       AudioServiceRepeatMode.one => RepeatMode.one,
       AudioServiceRepeatMode.all ||
-      AudioServiceRepeatMode.group =>
-        RepeatMode.all,
+      AudioServiceRepeatMode.group => RepeatMode.all,
     });
   }
 

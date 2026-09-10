@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:sqlite3/common.dart' show SqliteException;
 
 import '../../core/domain/local_file_source_port.dart';
@@ -86,7 +87,41 @@ import '../local_db/database.dart';
 class LocalFileSourceAdapter implements LocalFileSourcePort {
   final OpheliaDatabase _db;
 
-  LocalFileSourceAdapter(this._db);
+  /// Checks (and, if needed, requests) the runtime permission
+  /// [pickFolder]/[scanFolder] need before touching the filesystem —
+  /// injectable so a test can simulate denial without a real platform
+  /// channel (see [_defaultEnsureAudioPermission], and this class's own
+  /// test file for why `permission_handler` can't be exercised for real
+  /// in `flutter test`'s Dart-VM harness).
+  final Future<bool> Function() _ensureAudioPermission;
+
+  LocalFileSourceAdapter(
+    this._db, {
+    Future<bool> Function()? ensureAudioPermission,
+  }) : _ensureAudioPermission =
+           ensureAudioPermission ?? _defaultEnsureAudioPermission;
+
+  /// Android 13+ needs `READ_MEDIA_AUDIO`, older Android needs
+  /// `READ_EXTERNAL_STORAGE` (see AndroidManifest.xml) — `permission_handler`'s
+  /// `Permission.audio` maps to whichever one applies for the running OS
+  /// version. Neither is declared *or* requested on any other platform: iOS
+  /// grants folder access through the file picker's own consent flow (see
+  /// this class's doc comment), and desktop/web have no such runtime
+  /// permission model at all — asking there would either no-op or throw on
+  /// a platform `permission_handler` doesn't implement.
+  ///
+  /// This is the actual fix for the "no such table"-shaped bug this port
+  /// used to have: without ever *requesting* (only declaring) this
+  /// permission, `dart:io`'s direct filesystem calls in [_scanInto] could
+  /// silently fail to see files in a folder outside this app's own
+  /// storage — indistinguishable, from the UI, from "this folder is
+  /// genuinely empty."
+  static Future<bool> _defaultEnsureAudioPermission() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    final status = await ph.Permission.audio.status;
+    if (status.isGranted) return true;
+    return (await ph.Permission.audio.request()).isGranted;
+  }
 
   static const _audioExtensions = {
     '.mp3',
@@ -97,6 +132,12 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
     '.ogg',
     '.opus',
     '.wma',
+    // Common voice/call-recorder output formats -- missing these meant a
+    // real, non-empty folder like ".../Recordings/Record" scanned clean
+    // and reported "no audio files found" for files that were there all
+    // along, just of a format this list didn't recognize.
+    '.amr',
+    '.3gp',
   };
 
   /// Prefixes a track id produced by [scanFolder] with the file's own
@@ -114,6 +155,13 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
     if (kIsWeb) {
       return const Result.failure(
         StorageFailure('local folder browsing is not supported on web'),
+      );
+    }
+    if (!await _ensureAudioPermission()) {
+      return const Result.failure(
+        PermissionFailure(
+          'Ophelia needs permission to access audio files on this device',
+        ),
       );
     }
     try {
@@ -150,6 +198,20 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
     if (kIsWeb) {
       return const Result.failure(
         StorageFailure('local folder browsing is not supported on web'),
+      );
+    }
+    // Re-checked here, not just in [pickFolder]: a previously-linked
+    // folder is re-scanned directly (see localFolderTracksProvider),
+    // without ever going through pickFolder again -- e.g. on every app
+    // restart, or if the permission was revoked from system settings after
+    // linking. Without this, a revoked/never-granted permission on that
+    // path would hit exactly the silent-empty-result bug this exists to
+    // prevent, rather than surfacing as a real failure.
+    if (!await _ensureAudioPermission()) {
+      return const Result.failure(
+        PermissionFailure(
+          'Ophelia needs permission to access audio files on this device',
+        ),
       );
     }
     try {
@@ -271,5 +333,14 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
       return Result.failure(NotFoundFailure('not a local track id: $trackId'));
     }
     return Result.success(trackId.substring(_idPrefix.length));
+  }
+
+  @override
+  Future<Result<bool, Failure>> sourceExists(String trackId) async {
+    final pathResult = await getSourcePath(trackId);
+    return switch (pathResult) {
+      Success(value: final path) => Result.success(await File(path).exists()),
+      ResultFailure() => const Result.success(false),
+    };
   }
 }

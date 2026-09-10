@@ -3,7 +3,9 @@ import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
 import 'package:ophelia/core/domain/listening_event.dart';
+import 'package:ophelia/core/domain/playback_session_snapshot.dart';
 import 'package:ophelia/core/domain/playlist.dart';
+import 'package:ophelia/core/domain/track.dart';
 import 'package:ophelia/core/domain/user_profile.dart';
 import 'package:ophelia/core/error/failure.dart';
 import 'package:ophelia/data/local_db/database.dart'
@@ -290,5 +292,89 @@ void main() {
       final events = unwrapValue(await adapter.getListeningEvents());
       expect(events, hasLength(2));
     });
+  });
+
+  group('playback session', () {
+    test('getLastPlaybackState is a null success against a fresh database '
+        '-- no session ever saved is a normal state, not a failure',
+        () async {
+      expect(unwrapValue(await adapter.getLastPlaybackState()), isNull);
+    });
+
+    test(
+      'saveLastPlaybackState then getLastPlaybackState round-trips the '
+      'queue, current index, and position',
+      () async {
+        const t1 = Track(
+          id: 'local:/music/a.mp3',
+          title: 'A',
+          artist: 'Artist A',
+          album: 'Album A',
+          durationMs: 1000,
+          sourceType: TrackSourceType.local,
+        );
+        const t2 = Track(
+          id: 't2',
+          title: 'B',
+          artist: 'Artist B',
+          album: 'Album B',
+          durationMs: 2000,
+          coverArtPath: '/covers/b.jpg',
+          sourceType: TrackSourceType.streamed,
+        );
+        final snapshot = PlaybackSessionSnapshot(
+          queue: const [t1, t2],
+          queueIndex: 1,
+          position: const Duration(seconds: 42),
+        );
+
+        unwrapValue(await adapter.saveLastPlaybackState(snapshot));
+        final restored = unwrapValue(await adapter.getLastPlaybackState());
+
+        expect(restored, equals(snapshot));
+        expect(restored!.currentTrack, t2);
+      },
+    );
+
+    test(
+      'saveLastPlaybackState replaces the previously saved session '
+      'wholesale, rather than appending to its queue',
+      () async {
+        const t1 = Track(
+          id: 't1',
+          title: 'A',
+          artist: 'Artist A',
+          album: 'Album A',
+          durationMs: 1000,
+          sourceType: TrackSourceType.streamed,
+        );
+        const t2 = Track(
+          id: 't2',
+          title: 'B',
+          artist: 'Artist B',
+          album: 'Album B',
+          durationMs: 2000,
+          sourceType: TrackSourceType.streamed,
+        );
+        await adapter.saveLastPlaybackState(
+          PlaybackSessionSnapshot(
+            queue: const [t1],
+            queueIndex: 0,
+            position: Duration.zero,
+          ),
+        );
+
+        await adapter.saveLastPlaybackState(
+          PlaybackSessionSnapshot(
+            queue: const [t2],
+            queueIndex: 0,
+            position: const Duration(seconds: 5),
+          ),
+        );
+
+        final restored = unwrapValue(await adapter.getLastPlaybackState());
+        expect(restored!.queue, [t2]);
+      },
+    );
   });
 }
