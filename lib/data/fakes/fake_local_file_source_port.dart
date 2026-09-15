@@ -100,4 +100,14 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
       ResultFailure() => const Result.success(false),
     };
   }
+
+  @override
+  Track? trackForId(String trackId) {
+    for (final tracks in _tracksByFolder.values) {
+      for (final track in tracks) {
+        if (track.id == trackId) return track;
+      }
+    }
+    return null;
+  }
 }

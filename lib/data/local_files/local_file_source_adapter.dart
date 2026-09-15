@@ -280,6 +280,12 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
       ResultFailure() => const Result.success(false),
     };
   }
+
+  @override
+  Track? trackForId(String trackId) {
+    if (!trackId.startsWith(_idPrefix)) return null;
+    return _trackForFile(File(trackId.substring(_idPrefix.length)));
+  }
 }
 
 const _audioExtensions = {
