@@ -30,8 +30,20 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
     return Result.success(nextPickedFolder);
   }
 
+  /// How many times [scanFolder] has actually run, keyed by the path it
+  /// was asked to scan — lets a test assert a real re-scan happened
+  /// exactly when expected (an explicit refresh) and *not* on every
+  /// unrelated widget rebuild (see `LocalFilesScreen`'s own doc comment
+  /// on why `localFolderTracksProvider`'s caching matters at real scale).
+  final Map<String, int> scanFolderCallCounts = {};
+
   @override
   Future<Result<List<Track>, Failure>> scanFolder(String pathOrUri) async {
+    scanFolderCallCounts.update(
+      pathOrUri,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
     final tracks = _tracksByFolder[pathOrUri];
     if (tracks == null) {
       return Result.failure(NotFoundFailure('no such folder: $pathOrUri'));
