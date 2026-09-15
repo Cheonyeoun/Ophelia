@@ -275,13 +275,13 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
       _audioExtensions.contains(p.extension(path).toLowerCase());
 
   Track _trackForFile(File file) => Track(
-        id: '$_idPrefix${file.path}',
-        title: p.basenameWithoutExtension(file.path),
-        artist: 'Unknown artist',
-        album: p.basename(file.parent.path),
-        durationMs: 0,
-        sourceType: TrackSourceType.local,
-      );
+    id: '$_idPrefix${file.path}',
+    title: p.basenameWithoutExtension(file.path),
+    artist: 'Unknown artist',
+    album: p.basename(file.parent.path),
+    durationMs: 0,
+    sourceType: TrackSourceType.local,
+  );
 
   @override
   Future<Result<void, Failure>> linkFolder(String pathOrUri) async {
@@ -317,9 +317,7 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
         _db.linkedFolders,
       )..where((f) => f.path.equals(pathOrUri))).go();
       if (deletedCount == 0) {
-        return Result.failure(
-          NotFoundFailure('folder not linked: $pathOrUri'),
-        );
+        return Result.failure(NotFoundFailure('folder not linked: $pathOrUri'));
       }
       return const Result.success(null);
     } on SqliteException catch (e) {
@@ -342,5 +340,11 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
       Success(value: final path) => Result.success(await File(path).exists()),
       ResultFailure() => const Result.success(false),
     };
+  }
+
+  @override
+  Track? trackForId(String trackId) {
+    if (!trackId.startsWith(_idPrefix)) return null;
+    return _trackForFile(File(trackId.substring(_idPrefix.length)));
   }
 }
