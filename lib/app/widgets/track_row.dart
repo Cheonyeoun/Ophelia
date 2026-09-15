@@ -5,15 +5,20 @@ import 'cover_art.dart';
 
 /// A single track/artist/album result row — matches `.track-row` /
 /// `.track-meta` in docs/design/.
+///
+/// [subtitle] is optional: omitting it (rather than passing a repeated
+/// placeholder like "Unknown artist" on every row) collapses this to a
+/// lighter single-line row, for a list of entries that genuinely have no
+/// second line of metadata worth showing — see `LocalFilesScreen`.
 class TrackRow extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final VoidCallback? onTap;
   final Widget? trailing;
 
   const TrackRow({
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     this.onTap,
     this.trailing,
     super.key,
@@ -21,6 +26,7 @@ class TrackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final subtitle = this.subtitle;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -43,14 +49,15 @@ class TrackRow extends StatelessWidget {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.mist,
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.mist,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
                 ],
               ),
             ),

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart' as fp;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:sqlite3/common.dart' show SqliteException;
@@ -123,28 +123,6 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
     return (await ph.Permission.audio.request()).isGranted;
   }
 
-  static const _audioExtensions = {
-    '.mp3',
-    '.m4a',
-    '.aac',
-    '.wav',
-    '.flac',
-    '.ogg',
-    '.opus',
-    '.wma',
-    // Common voice/call-recorder output formats -- missing these meant a
-    // real, non-empty folder like ".../Recordings/Record" scanned clean
-    // and reported "no audio files found" for files that were there all
-    // along, just of a format this list didn't recognize.
-    '.amr',
-    '.3gp',
-  };
-
-  /// Prefixes a track id produced by [scanFolder] with the file's own
-  /// path, so [getSourcePath] can resolve it straight back without a
-  /// separate persisted track registry — see that method.
-  static const _idPrefix = 'local:';
-
   /// Prefixes the synthetic "folder" identifier used for a set of
   /// individually-picked iOS files (see the class doc comment) — the
   /// picked paths follow, newline-separated.
@@ -229,8 +207,13 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
       if (!await dir.exists()) {
         return Result.failure(NotFoundFailure('no such folder: $pathOrUri'));
       }
-      final tracks = <Track>[];
-      await _scanInto(dir, tracks, isTopLevel: true);
+      // The actual recursive walk -- potentially thousands of filesystem
+      // calls for a real, large folder -- runs on a background isolate
+      // via [compute], so opening this folder can't visibly freeze the
+      // UI thread while it works. See [_scanDirectoryForCompute]'s own
+      // doc comment for why only pure `dart:io`/`package:path` logic,
+      // no adapter state or plugin call, lives there.
+      final tracks = await compute(_scanDirectoryForCompute, pathOrUri);
       return Result.success(tracks);
     } on FileSystemException catch (e) {
       return Result.failure(StorageFailure(e.message));
@@ -238,50 +221,6 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
       return Result.failure(StorageFailure(e.toString()));
     }
   }
-
-  /// Walks [dir] for audio files, recursing into subfolders one level at
-  /// a time (rather than a single `dir.list(recursive: true)` stream) so
-  /// that a subfolder this app can't actually read -- a real risk given
-  /// the Android SAF path-persistence uncertainty documented on this
-  /// class -- is skipped instead of failing the *entire* scan and
-  /// discarding tracks already found in perfectly fine sibling folders.
-  ///
-  /// [isTopLevel] is the one exception: if the folder [scanFolder] was
-  /// asked to scan can't be read at all, that's a real failure the
-  /// caller needs to see, not a silently empty track list that would
-  /// read as "no audio files" instead of "couldn't access this folder".
-  Future<void> _scanInto(
-    Directory dir,
-    List<Track> tracks, {
-    bool isTopLevel = false,
-  }) async {
-    List<FileSystemEntity> entities;
-    try {
-      entities = await dir.list(followLinks: false).toList();
-    } on FileSystemException {
-      if (isTopLevel) rethrow;
-      return;
-    }
-    for (final entity in entities) {
-      if (entity is Directory) {
-        await _scanInto(entity, tracks);
-      } else if (entity is File && _isAudioFile(entity.path)) {
-        tracks.add(_trackForFile(entity));
-      }
-    }
-  }
-
-  bool _isAudioFile(String path) =>
-      _audioExtensions.contains(p.extension(path).toLowerCase());
-
-  Track _trackForFile(File file) => Track(
-        id: '$_idPrefix${file.path}',
-        title: p.basenameWithoutExtension(file.path),
-        artist: 'Unknown artist',
-        album: p.basename(file.parent.path),
-        durationMs: 0,
-        sourceType: TrackSourceType.local,
-      );
 
   @override
   Future<Result<void, Failure>> linkFolder(String pathOrUri) async {
@@ -317,9 +256,7 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
         _db.linkedFolders,
       )..where((f) => f.path.equals(pathOrUri))).go();
       if (deletedCount == 0) {
-        return Result.failure(
-          NotFoundFailure('folder not linked: $pathOrUri'),
-        );
+        return Result.failure(NotFoundFailure('folder not linked: $pathOrUri'));
       }
       return const Result.success(null);
     } on SqliteException catch (e) {
@@ -343,4 +280,87 @@ class LocalFileSourceAdapter implements LocalFileSourcePort {
       ResultFailure() => const Result.success(false),
     };
   }
+}
+
+const _audioExtensions = {
+  '.mp3',
+  '.m4a',
+  '.aac',
+  '.wav',
+  '.flac',
+  '.ogg',
+  '.opus',
+  '.wma',
+  // Common voice/call-recorder output formats -- missing these meant a
+  // real, non-empty folder like ".../Recordings/Record" scanned clean
+  // and reported "no audio files found" for files that were there all
+  // along, just of a format this list didn't recognize.
+  '.amr',
+  '.3gp',
+};
+
+/// Prefixes a track id produced by [LocalFileSourceAdapter.scanFolder]
+/// with the file's own path, so [LocalFileSourceAdapter.getSourcePath]
+/// can resolve it straight back without a separate persisted track
+/// registry — see that method.
+const _idPrefix = 'local:';
+
+bool _isAudioFile(String path) =>
+    _audioExtensions.contains(p.extension(path).toLowerCase());
+
+Track _trackForFile(File file) => Track(
+  id: '$_idPrefix${file.path}',
+  title: p.basenameWithoutExtension(file.path),
+  artist: unknownArtistPlaceholder,
+  album: p.basename(file.parent.path),
+  durationMs: 0,
+  sourceType: TrackSourceType.local,
+);
+
+/// Walks [dir] for audio files, recursing into subfolders one level at a
+/// time (rather than a single `dir.list(recursive: true)` stream) so
+/// that a subfolder this app can't actually read -- a real risk given
+/// the Android SAF path-persistence uncertainty documented on
+/// [LocalFileSourceAdapter] -- is skipped instead of failing the *entire*
+/// scan and discarding tracks already found in perfectly fine sibling
+/// folders.
+///
+/// [isTopLevel] is the one exception: if the folder
+/// [LocalFileSourceAdapter.scanFolder] was asked to scan can't be read at
+/// all, that's a real failure the caller needs to see, not a silently
+/// empty track list that would read as "no audio files" instead of
+/// "couldn't access this folder".
+Future<void> _scanInto(
+  Directory dir,
+  List<Track> tracks, {
+  bool isTopLevel = false,
+}) async {
+  List<FileSystemEntity> entities;
+  try {
+    entities = await dir.list(followLinks: false).toList();
+  } on FileSystemException {
+    if (isTopLevel) rethrow;
+    return;
+  }
+  for (final entity in entities) {
+    if (entity is Directory) {
+      await _scanInto(entity, tracks);
+    } else if (entity is File && _isAudioFile(entity.path)) {
+      tracks.add(_trackForFile(entity));
+    }
+  }
+}
+
+/// The [compute]-callable entry point for [LocalFileSourceAdapter.scanFolder]'s
+/// real, potentially-thousands-of-files recursive walk -- deliberately a
+/// top-level function taking/returning only plain, isolate-sendable data
+/// (a path in, a list of playable [Track]s out), with no adapter state
+/// (`_db`, the injected permission check, ...) and no plugin/platform-
+/// channel call of any kind, since none of those work off the main
+/// isolate [compute] runs this on. The caller has already confirmed
+/// [rootPath] exists before ever calling this.
+Future<List<Track>> _scanDirectoryForCompute(String rootPath) async {
+  final tracks = <Track>[];
+  await _scanInto(Directory(rootPath), tracks, isTopLevel: true);
+  return tracks;
 }

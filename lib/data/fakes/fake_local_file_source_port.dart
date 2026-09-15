@@ -22,16 +22,28 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
     List<String>? linkedFolders,
     Map<String, List<Track>>? tracksByFolder,
     this.nextPickedFolder,
-  })  : _linkedFolders = List.of(linkedFolders ?? const []),
-        _tracksByFolder = Map.of(tracksByFolder ?? const {});
+  }) : _linkedFolders = List.of(linkedFolders ?? const []),
+       _tracksByFolder = Map.of(tracksByFolder ?? const {});
 
   @override
   Future<Result<String?, Failure>> pickFolder() async {
     return Result.success(nextPickedFolder);
   }
 
+  /// How many times [scanFolder] has actually run, keyed by the path it
+  /// was asked to scan — lets a test assert a real re-scan happened
+  /// exactly when expected (an explicit refresh) and *not* on every
+  /// unrelated widget rebuild (see `LocalFilesScreen`'s own doc comment
+  /// on why `localFolderTracksProvider`'s caching matters at real scale).
+  final Map<String, int> scanFolderCallCounts = {};
+
   @override
   Future<Result<List<Track>, Failure>> scanFolder(String pathOrUri) async {
+    scanFolderCallCounts.update(
+      pathOrUri,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
     final tracks = _tracksByFolder[pathOrUri];
     if (tracks == null) {
       return Result.failure(NotFoundFailure('no such folder: $pathOrUri'));
@@ -56,9 +68,7 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
   Future<Result<void, Failure>> removeLinkedFolder(String pathOrUri) async {
     final removed = _linkedFolders.remove(pathOrUri);
     if (!removed) {
-      return Result.failure(
-        NotFoundFailure('folder not linked: $pathOrUri'),
-      );
+      return Result.failure(NotFoundFailure('folder not linked: $pathOrUri'));
     }
     return const Result.success(null);
   }

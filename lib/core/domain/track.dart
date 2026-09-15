@@ -1,6 +1,13 @@
 /// Where the audio bytes for a [Track] come from.
 enum TrackSourceType { streamed, local, downloaded }
 
+/// [Track.artist] for a local-folder track (see `LocalFileSourceAdapter`'s
+/// doc comment on why it has no real tag reader) -- shared, rather than a
+/// literal duplicated at both the adapter that writes it and any screen
+/// that wants to render a local track's metadata-less row differently
+/// (see e.g. `LocalFilesScreen`), so the two can't quietly drift apart.
+const unknownArtistPlaceholder = 'Unknown artist';
+
 /// A single playable song. Immutable value type — no Flutter, no package
 /// imports (see Docs/Architecture.md §3.1).
 class Track {
@@ -41,8 +48,9 @@ class Track {
       artist: artist ?? this.artist,
       album: album ?? this.album,
       durationMs: durationMs ?? this.durationMs,
-      coverArtPath:
-          clearCoverArtPath ? null : (coverArtPath ?? this.coverArtPath),
+      coverArtPath: clearCoverArtPath
+          ? null
+          : (coverArtPath ?? this.coverArtPath),
       sourceType: sourceType ?? this.sourceType,
     );
   }
@@ -62,12 +70,12 @@ class Track {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        title,
-        artist,
-        album,
-        durationMs,
-        coverArtPath,
-        sourceType,
-      );
+    id,
+    title,
+    artist,
+    album,
+    durationMs,
+    coverArtPath,
+    sourceType,
+  );
 }
