@@ -47,3 +47,20 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 .claude/
+
+# Desktop-platform plugin registration -- `flutter pub get` regenerates
+# these from pubspec.lock/.flutter-plugins-dependencies (already
+# ignored above) on every dependency change, and various local tooling
+# (IDE Flutter/Dart plugins in particular) can trigger that run
+# automatically on a branch switch. Tracking the *output* alongside the
+# already-ignored *input* meant these constantly showed as locally
+# modified for no real content reason, repeatedly blocking a clean
+# `git pull`/checkout -- not a real edit to review, just regenerated
+# build output that's supposed to be regenerated locally.
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+macos/Flutter/GeneratedPluginRegistrant.swift
