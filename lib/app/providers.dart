@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/domain/download_port.dart';
 import '../core/domain/export_import_port.dart';
+import '../core/domain/image_picker_port.dart';
 import '../core/domain/local_file_source_port.dart';
 import '../core/domain/local_library_port.dart';
 import '../core/domain/media_source_port.dart';
@@ -48,6 +49,7 @@ import '../core/usecases/update_profile.dart';
 import '../data/fakes/fake_download_port.dart';
 import '../data/fakes/fake_export_import_port.dart';
 import '../data/fakes/fake_media_source_port.dart';
+import '../data/images/image_picker_adapter.dart';
 import '../data/local_db/database.dart' hide Playlist;
 import '../data/local_db/drift_library_adapter.dart';
 import '../data/local_db/drift_settings_adapter.dart';
@@ -63,17 +65,17 @@ import '../playback/engine/just_audio_playback_adapter.dart';
 // Most port providers below still wire in the fakes from lib/data/fakes/
 // — temporary, UI-development-only stand-ins (see that folder's doc
 // comments) — until their real adapters exist. `localLibraryProvider`,
-// `playbackEngineProvider`, `localFileSourceProvider`, and
-// `settingsPortProvider` are the exceptions: they're backed by the real
-// `DriftLibraryAdapter` (lib/data/local_db/), `JustAudioPlaybackAdapter`
-// (lib/playback/engine/), `LocalFileSourceAdapter`
-// (lib/data/local_files/), and `DriftSettingsAdapter`
-// (lib/data/local_db/) now. Widget/unit tests that want a fake's
-// predictable, hardware-free behavior instead must override the
-// corresponding provider explicitly (in a `ProviderScope`'s `overrides`,
-// or a `ProviderContainer`'s) with `FakeLocalLibraryPort()`/
-// `FakePlaybackEnginePort()`/`FakeLocalFileSourcePort()`/
-// `FakeSettingsPort()`.
+// `playbackEngineProvider`, `localFileSourceProvider`,
+// `settingsPortProvider`, and `imagePickerPortProvider` are the
+// exceptions: they're backed by the real `DriftLibraryAdapter`
+// (lib/data/local_db/), `JustAudioPlaybackAdapter` (lib/playback/engine/),
+// `LocalFileSourceAdapter` (lib/data/local_files/), `DriftSettingsAdapter`
+// (lib/data/local_db/), and `ImagePickerAdapter` (lib/data/images/) now.
+// Widget/unit tests that want a fake's predictable, hardware-free
+// behavior instead must override the corresponding provider explicitly
+// (in a `ProviderScope`'s `overrides`, or a `ProviderContainer`'s) with
+// `FakeLocalLibraryPort()`/`FakePlaybackEnginePort()`/
+// `FakeLocalFileSourcePort()`/`FakeSettingsPort()`/`FakeImagePickerPort()`.
 
 final mediaSourceProvider = Provider<MediaSourcePort>(
   (ref) => FakeMediaSourcePort(),
@@ -122,6 +124,13 @@ final exportImportProvider = Provider<ExportImportPort>(
 /// saved.
 final settingsPortProvider = Provider<SettingsPort>(
   (ref) => DriftSettingsAdapter(ref.watch(opheliaDatabaseProvider)),
+);
+
+/// Backed by the real `ImagePickerAdapter` (lib/data/images/) -- see its
+/// own doc comment for why it isn't unit-testable and what stands in for
+/// it in tests.
+final imagePickerPortProvider = Provider<ImagePickerPort>(
+  (ref) => ImagePickerAdapter(),
 );
 
 /// Shared between PlayTrack, PauseTrack, SkipNext, and SkipPrevious so
@@ -431,6 +440,15 @@ final localFolderTracksProvider = FutureProvider.family<List<Track>, String>((
 
 /// The top tracks by play count over the last 7 days, resolved from
 /// ComputeTopSongs's track ids to full [Track]s for display.
+///
+/// [allTracksProvider] only ever knows about [mediaSourceProvider]'s
+/// catalog -- a track actually played from a linked local folder (today,
+/// the only source that's really playable end to end, see
+/// `LocalFileSourceAdapter`) would silently vanish from "Top 5"/"Most
+/// heard" despite genuinely having been played, since its id was never
+/// going to be in that catalog. [LocalFileSourcePort.trackForId]
+/// resolves those ids directly, the same way it always could -- nothing
+/// here waits on a media-cache adapter that doesn't exist yet.
 final topSongsProvider = FutureProvider<List<Track>>((ref) async {
   final result = await ref.watch(computeTopSongsProvider)(
     window: const Duration(days: 7),
@@ -441,8 +459,6 @@ final topSongsProvider = FutureProvider<List<Track>>((ref) async {
   };
   final allTracks = await ref.watch(allTracksProvider.future);
   final byId = {for (final track in allTracks) track.id: track};
-  return [
-    for (final id in ids)
-      if (byId[id] != null) byId[id]!,
-  ];
+  final localFileSource = ref.watch(localFileSourceProvider);
+  return [for (final id in ids) ?(byId[id] ?? localFileSource.trackForId(id))];
 });

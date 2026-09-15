@@ -72,5 +72,11 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<!-- image_picker: photo library access for setting a profile/background
+	     picture; see lib/data/images/image_picker_adapter.dart. Without this
+	     key, ImagePicker.pickImage crashes outright on iOS rather than
+	     failing gracefully. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ophelia needs access to your photos to set a profile or background picture.</string>
 </dict>
 </plist>
