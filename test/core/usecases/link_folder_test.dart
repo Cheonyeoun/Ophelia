@@ -44,37 +44,32 @@ class _LinkFailingSource implements LocalFileSourcePort {
   @override
   Future<Result<bool, Failure>> sourceExists(String trackId) =>
       inner.sourceExists(trackId);
+
+  @override
+  Track? trackForId(String trackId) => inner.trackForId(trackId);
 }
 
 void main() {
   test('picks and links a folder, returning its path', () async {
-    final localFileSource = FakeLocalFileSourcePort(
-      nextPickedFolder: '/music',
-    );
+    final localFileSource = FakeLocalFileSourcePort(nextPickedFolder: '/music');
     final linkFolder = LinkFolder(localFileSource);
 
     final path = unwrapValue(await linkFolder());
 
     expect(path, '/music');
-    expect(
-      unwrapValue(await localFileSource.getLinkedFolders()),
-      ['/music'],
-    );
+    expect(unwrapValue(await localFileSource.getLinkedFolders()), ['/music']);
   });
 
-  test(
-    'returns a null success, without linking anything, when the user '
-    'cancels the picker',
-    () async {
-      final localFileSource = FakeLocalFileSourcePort();
-      final linkFolder = LinkFolder(localFileSource);
+  test('returns a null success, without linking anything, when the user '
+      'cancels the picker', () async {
+    final localFileSource = FakeLocalFileSourcePort();
+    final linkFolder = LinkFolder(localFileSource);
 
-      final path = unwrapValue(await linkFolder());
+    final path = unwrapValue(await linkFolder());
 
-      expect(path, isNull);
-      expect(unwrapValue(await localFileSource.getLinkedFolders()), isEmpty);
-    },
-  );
+    expect(path, isNull);
+    expect(unwrapValue(await localFileSource.getLinkedFolders()), isEmpty);
+  });
 
   test('propagates a failure from the picker itself', () async {
     final localFileSource = _FailingPickSource();
@@ -85,19 +80,16 @@ void main() {
     expect(failure, isA<StorageFailure>());
   });
 
-  test(
-    'propagates a failure when persisting the picked folder fails, '
-    'rather than reporting it as a cancellation',
-    () async {
-      final inner = FakeLocalFileSourcePort(nextPickedFolder: '/music');
-      final localFileSource = _LinkFailingSource(inner);
-      final linkFolder = LinkFolder(localFileSource);
+  test('propagates a failure when persisting the picked folder fails, '
+      'rather than reporting it as a cancellation', () async {
+    final inner = FakeLocalFileSourcePort(nextPickedFolder: '/music');
+    final localFileSource = _LinkFailingSource(inner);
+    final linkFolder = LinkFolder(localFileSource);
 
-      final failure = unwrapFailure(await linkFolder());
+    final failure = unwrapFailure(await linkFolder());
 
-      expect(failure, isA<StorageFailure>());
-    },
-  );
+    expect(failure, isA<StorageFailure>());
+  });
 }
 
 class _FailingPickSource implements LocalFileSourcePort {
@@ -129,4 +121,7 @@ class _FailingPickSource implements LocalFileSourcePort {
   @override
   Future<Result<bool, Failure>> sourceExists(String trackId) =>
       throw UnimplementedError();
+
+  @override
+  Track? trackForId(String trackId) => throw UnimplementedError();
 }

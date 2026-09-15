@@ -63,4 +63,16 @@ abstract interface class LocalFileSourcePort {
   /// folder that no longer exists) since the session was saved. `false`
   /// for any id this port didn't produce, same as [getSourcePath].
   Future<Result<bool, Failure>> sourceExists(String trackId);
+
+  /// Reconstructs a displayable [Track] straight from [trackId] (as
+  /// produced by [scanFolder]) -- no re-scanning the folder it came from,
+  /// no filesystem access at all. For resolving a listening event's track
+  /// id back to something `ComputeTopSongs`/`topSongsProvider` can show,
+  /// even for a local track the catalog `allTracksProvider` searches was
+  /// never going to know about. Metadata is exactly what [scanFolder]
+  /// would have produced for the same file today -- filename as title,
+  /// parent folder as album, duration unknown (`0`) -- see
+  /// `LocalFileSourceAdapter`'s own doc comment. `null` for any id this
+  /// port didn't produce.
+  Track? trackForId(String trackId);
 }

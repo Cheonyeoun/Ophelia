@@ -22,8 +22,8 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
     List<String>? linkedFolders,
     Map<String, List<Track>>? tracksByFolder,
     this.nextPickedFolder,
-  })  : _linkedFolders = List.of(linkedFolders ?? const []),
-        _tracksByFolder = Map.of(tracksByFolder ?? const {});
+  }) : _linkedFolders = List.of(linkedFolders ?? const []),
+       _tracksByFolder = Map.of(tracksByFolder ?? const {});
 
   @override
   Future<Result<String?, Failure>> pickFolder() async {
@@ -56,9 +56,7 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
   Future<Result<void, Failure>> removeLinkedFolder(String pathOrUri) async {
     final removed = _linkedFolders.remove(pathOrUri);
     if (!removed) {
-      return Result.failure(
-        NotFoundFailure('folder not linked: $pathOrUri'),
-      );
+      return Result.failure(NotFoundFailure('folder not linked: $pathOrUri'));
     }
     return const Result.success(null);
   }
@@ -89,5 +87,15 @@ class FakeLocalFileSourcePort implements LocalFileSourcePort {
       Success() => const Result.success(true),
       ResultFailure() => const Result.success(false),
     };
+  }
+
+  @override
+  Track? trackForId(String trackId) {
+    for (final tracks in _tracksByFolder.values) {
+      for (final track in tracks) {
+        if (track.id == trackId) return track;
+      }
+    }
+    return null;
   }
 }
